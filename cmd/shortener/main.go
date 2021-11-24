@@ -15,11 +15,6 @@ type URL struct {
 }
 
 
-type Subj struct {
-	ShortURL string `json:"short_url"`
-}
-
-
 type item struct {
 	FullURL  string
 }
