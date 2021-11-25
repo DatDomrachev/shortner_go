@@ -9,7 +9,7 @@ import (
 
 func SimpleReadHandler(w http.ResponseWriter, r *http.Request) {
 	
-    fullUrl, err := repository.Load(r.URL.Path)
+    fullURL, err := repository.Load(r.URL.Path)
    	
    	if err != nil {
         http.Error(w, "Not found", http.StatusBadRequest)
@@ -17,7 +17,7 @@ func SimpleReadHandler(w http.ResponseWriter, r *http.Request) {
 
 
     if (fullUrl != "") {
-		http.Redirect(w,r, fullUrl, http.StatusTemporaryRedirect)
+		http.Redirect(w,r, fullURL, http.StatusTemporaryRedirect)
     } 
 	
 
