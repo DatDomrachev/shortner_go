@@ -16,7 +16,7 @@ func SimpleReadHandler(w http.ResponseWriter, r *http.Request) {
     } 
 
 
-    if (fullUrl != "") {
+    if (fullURL != "") {
 		http.Redirect(w,r, fullURL, http.StatusTemporaryRedirect)
     } 
 	
