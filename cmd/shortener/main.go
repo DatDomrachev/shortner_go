@@ -8,8 +8,11 @@ import (
 
 
 func main() {
-	ctx := context.WithValue(context.Background(), "address", "localhost:8080")
-	s:= server.NewServer("address")
+	type contextKey string
+
+	
+	ctx := context.Background()
+	s:= server.NewServer("localhost:8080")
 	s.Run(ctx)
 	
 }
