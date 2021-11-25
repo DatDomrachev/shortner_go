@@ -6,7 +6,7 @@ import (
 )
 
 type Repositorer interface {
-  Load(shortUrl string) (string, error)
+  Load(shortURL string) (string, error)
   Store(url string) (string, error)
 }
 
@@ -18,8 +18,8 @@ type item struct {
 var items []item
 
 
-func Load(shortUrl string) (string, error) {
-	param := strings.TrimPrefix(shortUrl, `/`)
+func Load(shortURL string) (string, error) {
+	param := strings.TrimPrefix(shortURL, `/`)
 
 	id, err := strconv.Atoi(param)
 
