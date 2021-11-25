@@ -9,9 +9,12 @@ import (
 	"net/http/httptest"
 	"bytes"
 	"log"
+	"github.com/DatDomrachev/shortner_go/internal/app/server"
+	"github.com/DatDomrachev/shortner_go/internal/app/handlers"
 )
 
 
+type Serv *server.Server
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path, body string) (*http.Response, string) {
 	
@@ -29,11 +32,11 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path, body string) (
 	
 	
 	if (method == "POST") {	
-		SimpleWriteHandler(w, request)
+		handlers.SimpleWriteHandler(w, request)
 	}
 
 	if (method == "GET") {
-		SimpleReadHandler(w, request)
+		handlers.SimpleReadHandler(w, request)
 	}	
 	
 	result := w.Result()
@@ -48,7 +51,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path, body string) (
 
 
 func TestRouter(t *testing.T) {
-	r := SimpleRouter()
+	r := server.ConfigureRouter()
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
