@@ -8,8 +8,6 @@ import (
 
 
 func main() {
-	type contextKey string
-
 	
 	ctx := context.Background()
 	s:= server.NewServer("localhost:8080")
