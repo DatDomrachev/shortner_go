@@ -22,7 +22,7 @@ type srv struct {
 	repo repository.Repositorier
 }
 
-func NewServer(address string, repo repository.Repositorier) *srv{
+func New(address string, repo repository.Repositorier) *srv{
 	server := &srv {
 		address: address,
 		repo: repo, 
@@ -38,10 +38,11 @@ func (s *srv)Run(ctx context.Context) (err error) {
 		Handler: router,
 	}
 	
-	
+	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		if err := serv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			log.Printf("listener failed:+%v\n",err)
+			cancel()
 		}
 	
 	}()
