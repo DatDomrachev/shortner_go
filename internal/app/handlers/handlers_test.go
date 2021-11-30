@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"testing"
@@ -9,14 +9,12 @@ import (
 	"net/http/httptest"
 	"bytes"
 	"log"
-	"github.com/DatDomrachev/shortner_go/internal/app/server"
-	"github.com/DatDomrachev/shortner_go/internal/app/handlers"
+	"github.com/DatDomrachev/shortner_go/internal/app/repository"
 )
 
 
-type Serv *server.Server
 
-func testRequest(t *testing.T, ts *httptest.Server, method, path, body string) (*http.Response, string) {
+func testRequest(t *testing.T, repo *repository.Repo, method, path, body string) (*http.Response, string) {
 	
 	request := httptest.NewRequest(method, "http://localhost:8080"+path, nil) 
 
@@ -32,11 +30,11 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path, body string) (
 	
 	
 	if (method == "POST") {	
-		handlers.SimpleWriteHandler(w, request)
+		SimpleWriteHandler(repo)(w, request)
 	}
 
 	if (method == "GET") {
-		handlers.SimpleReadHandler(w, request)
+		SimpleReadHandler(repo)(w, request)
 	}	
 	
 	result := w.Result()
@@ -49,26 +47,23 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path, body string) (
 	
 }
 
-
 func TestRouter(t *testing.T) {
-	r := server.ConfigureRouter()
-	ts := httptest.NewServer(r)
-	defer ts.Close()
+	repo:=repository.New()
 
-	result1, body1 := testRequest(t, ts, "POST", "/", "http://google.com")
+	result1, body1 := testRequest(t, repo, "POST", "/", "http://google.com")
 	assert.Equal(t, 201, result1.StatusCode);
 	assert.Equal(t, "application/json", result1.Header.Get("Content-Type"));	
 	assert.Equal(t, "http://localhost:8080/1", body1);
 	defer result1.Body.Close()	
 
-	result2, body2 := testRequest(t, ts, "GET", "/1", "")
+	result2, body2 := testRequest(t, repo, "GET", "/1", "")
 	assert.Equal(t, 307, result2.StatusCode);
 	assert.Equal(t, "text/html; charset=utf-8", result2.Header.Get("Content-Type"));	
 	assert.Equal(t, "http://google.com", result2.Header.Get("Location"));
 	log.Println(body2)	
 	defer result2.Body.Close()
 
-	result3, body3 := testRequest(t, ts, "GET", "/aboba23","")
+	result3, body3 := testRequest(t, repo, "GET", "/aboba23","")
 	assert.Equal(t, http.StatusBadRequest, result3.StatusCode);
 	assert.Equal(t, "text/plain; charset=utf-8", result3.Header.Get("Content-Type"));	
 	log.Println(body3)	
