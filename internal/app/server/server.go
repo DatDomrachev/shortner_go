@@ -11,8 +11,8 @@ import(
     "os"
 	"os/signal"
 	"syscall"
-	"time"
 	"log"
+	"time"
 )
 
 type Server interface {
@@ -34,7 +34,7 @@ func NewServer(address string, repo repository.Repositorier) *srv{
 	return server
 }
 
-func (s *srv)Run(ctx context.Context) {
+func (s *srv)Run() {
 	router := s.ConfigureRouter()
 	serv := &http.Server{
 		Addr:    s.address,
@@ -48,12 +48,10 @@ func (s *srv)Run(ctx context.Context) {
 		if err := serv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
+	
 	}()
 	log.Print("Server Started")
 
-	<-done
-	log.Print("Server Stopped")
-	
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer func() {
 		// extra handling here
