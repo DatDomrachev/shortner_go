@@ -45,7 +45,7 @@ func (s *srv)Run() {
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		if err := serv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := http.ListenAndServe(serv.Addr, serv.Handler); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
 	
