@@ -8,9 +8,6 @@ import(
     "net/http"
     "github.com/DatDomrachev/shortner_go/internal/app/handlers"
     "github.com/DatDomrachev/shortner_go/internal/app/repository"
-    "os"
-	"os/signal"
-	"syscall"
 	"log"
 	"time"
 )
@@ -34,34 +31,37 @@ func NewServer(address string, repo repository.Repositorier) *srv{
 	return server
 }
 
-func (s *srv)Run() {
+func (s *srv)Run(ctx context.Context) (err error) {
 	router := s.ConfigureRouter()
 	serv := &http.Server{
 		Addr:    s.address,
 		Handler: router,
 	}
 	
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-
+	
 	go func() {
-		if err := http.ListenAndServe(serv.Addr, serv.Handler); err != nil && err != http.ErrServerClosed {
+		if err := serv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
 	
 	}()
+
+	<-ctx.Done()
+
 	log.Print("Server Started")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer func() {
 		// extra handling here
 		cancel()
 	}()
 
-	if err := serv.Shutdown(ctx); err != nil {
+	if err := serv.Shutdown(ctxShutDown); err != nil {
 		log.Fatalf("Server Shutdown Failed:%+v", err)
 	}
 	log.Print("Server Exited Properly")
+
+	return
 
 }
 
