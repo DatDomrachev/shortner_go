@@ -54,7 +54,7 @@ func SimpleWriteHandler(repo repository.Repositorier) func(w http.ResponseWriter
 }	
 
 
-func ApiJsonHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
+func SimpleJSONHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {	
 
 		var url repository.Item
@@ -84,6 +84,6 @@ func ApiJsonHandler(repo repository.Repositorier) func(w http.ResponseWriter, r 
 		    return
 		}
 	   
-	   w.Write([]byte(buf.String()))
+	   w.Write(buf.Bytes())
 	}
 }

@@ -35,7 +35,7 @@ func testRequest(t *testing.T, repo *repository.Repo, method, path, body string)
 	}
 
 	if(method == "POST" && path =="/api/shortner_go") {
-		ApiJsonHandler(repo)(w, request)
+		SimpleJSONHandler(repo)(w, request)
 	}
 
 	if (method == "GET") {
