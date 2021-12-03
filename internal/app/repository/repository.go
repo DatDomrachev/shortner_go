@@ -11,12 +11,16 @@ type Repositorier interface {
 }
 
 
-type item struct {
-	FullURL  string
+type Item struct {
+	FullURL  string `json:"url"`
+}
+
+type Result struct {
+	ShortURL string `json:"result"`
 }
 
 type Repo struct {
-	items []item
+	items []Item
 }
 
 
@@ -43,7 +47,7 @@ func (r *Repo) Load(shortURL string) (string, error) {
 }
 
 func (r *Repo) Store(url string) (string, error) {
-	newItem := item{FullURL: url}
+	newItem := Item{FullURL: url}
     r.items = append(r.items, newItem)	
     result := len(r.items)
    	return strconv.Itoa(result), nil

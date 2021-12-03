@@ -72,6 +72,7 @@ func (s *srv)ConfigureRouter() *chi.Mux {
 	router.Use(middleware.Logger)
 	router.Get("/{Id}",handlers.SimpleReadHandler(s.repo)) 
 	router.Post("/", handlers.SimpleWriteHandler(s.repo))
+	router.Post("/api/shortner_go", handlers.ApiJsonHandler(s.repo))
 	return router 
 }
 

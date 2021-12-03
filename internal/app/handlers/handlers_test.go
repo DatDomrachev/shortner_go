@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"bytes"
 	"log"
+	"encoding/json"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
 )
 
@@ -29,8 +30,12 @@ func testRequest(t *testing.T, repo *repository.Repo, method, path, body string)
 	w := httptest.NewRecorder()
 	
 	
-	if (method == "POST") {	
+	if (method == "POST" && path =="/") {	
 		SimpleWriteHandler(repo)(w, request)
+	}
+
+	if(method == "POST" && path =="/api/shortner_go") {
+		ApiJsonHandler(repo)(w, request)
 	}
 
 	if (method == "GET") {
@@ -68,5 +73,28 @@ func TestRouter(t *testing.T) {
 	assert.Equal(t, "text/plain; charset=utf-8", result3.Header.Get("Content-Type"));	
 	log.Println(body3)	
 	defer result3.Body.Close()
+
+
+	newQuery :=repository.Item{FullURL:"http://youtube.com"}	
+
+	inputBuf := bytes.NewBuffer([]byte{})
+    if err := json.NewEncoder(inputBuf).Encode(newQuery); err != nil {
+		 log.Println(err.Error());
+	    return
+	}
+
+	newResult := repository.Result{ShortURL:"http://localhost:8080/2"}	
+	outputBuf := bytes.NewBuffer([]byte{})
+    if err := json.NewEncoder(outputBuf).Encode(newResult); err != nil {
+		log.Println(err.Error());
+	    return
+	}
+
+	result4, body4 := testRequest(t, repo, "POST", "/api/shortner_go", inputBuf.String())
+	assert.Equal(t, 201, result4.StatusCode);
+	assert.Equal(t, "application/json", result4.Header.Get("Content-Type"));	
+	assert.Equal(t, outputBuf.String(), body4);
+	log.Println(body4)
+	defer result4.Body.Close()	
 
 }
