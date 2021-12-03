@@ -90,7 +90,7 @@ func TestRouter(t *testing.T) {
 	    return
 	}
 
-	result4, body4 := testRequest(t, repo, "POST", "/api/shortner_go", inputBuf.String())
+	result4, body4 := testRequest(t, repo, "POST", "/api/shorten", inputBuf.String())
 	assert.Equal(t, 201, result4.StatusCode);
 	assert.Equal(t, "application/json", result4.Header.Get("Content-Type"));	
 	assert.Equal(t, outputBuf.String(), body4);
