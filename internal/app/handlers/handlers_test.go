@@ -11,18 +11,19 @@ import (
 	"log"
 	"encoding/json"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
+	"github.com/DatDomrachev/shortner_go/internal/app/config"
 )
 
 
 
-func testRequest(t *testing.T, repo *repository.Repo, method, path, body string) (*http.Response, string) {
+func testRequest(t *testing.T, config *config.Config, repo *repository.Repo, method, path, body string) (*http.Response, string) {
 	
-	request := httptest.NewRequest(method, "http://localhost:8080"+path, nil) 
+	request := httptest.NewRequest(method, config.Address+path, nil) 
 
 	if (body != "") {
 		var content = []byte(body)
 		reqContent := bytes.NewBuffer(content)
-		request = httptest.NewRequest(method, "http://localhost:8080"+path, reqContent)
+		request = httptest.NewRequest(method, config.Address+path, reqContent)
 	}
 	
 
@@ -53,22 +54,27 @@ func testRequest(t *testing.T, repo *repository.Repo, method, path, body string)
 }
 
 func TestRouter(t *testing.T) {
-	repo:=repository.New()
+	
+	config, err := config.GetConfig() 
+	if err != nil {
+		log.Printf("failed to configurate:+%v\n", err)
+	}
 
-	result1, body1 := testRequest(t, repo, "POST", "/", "http://google.com")
+	repo:=repository.New(config.BaseURL)
+	result1, body1 := testRequest(t, config, repo, "POST", "/", "http://google.com")
 	assert.Equal(t, 201, result1.StatusCode);
 	assert.Equal(t, "application/json", result1.Header.Get("Content-Type"));	
-	assert.Equal(t, "http://localhost:8080/1", body1);
+	assert.Equal(t, config.BaseURL + "1", body1);
 	defer result1.Body.Close()	
 
-	result2, body2 := testRequest(t, repo, "GET", "/1", "")
+	result2, body2 := testRequest(t, config, repo, "GET", "/1", "")
 	assert.Equal(t, 307, result2.StatusCode);
 	assert.Equal(t, "text/html; charset=utf-8", result2.Header.Get("Content-Type"));	
 	assert.Equal(t, "http://google.com", result2.Header.Get("Location"));
 	log.Println(body2)	
 	defer result2.Body.Close()
 
-	result3, body3 := testRequest(t, repo, "GET", "/aboba23","")
+	result3, body3 := testRequest(t, config, repo, "GET", "/aboba23","")
 	assert.Equal(t, http.StatusBadRequest, result3.StatusCode);
 	assert.Equal(t, "text/plain; charset=utf-8", result3.Header.Get("Content-Type"));	
 	log.Println(body3)	
@@ -83,14 +89,14 @@ func TestRouter(t *testing.T) {
 	    return
 	}
 
-	newResult := repository.Result{ShortURL:"http://localhost:8080/2"}	
+	newResult := repository.Result{ShortURL:config.BaseURL + "2"}	
 	outputBuf := bytes.NewBuffer([]byte{})
     if err := json.NewEncoder(outputBuf).Encode(newResult); err != nil {
 		log.Println(err.Error());
 	    return
 	}
 
-	result4, body4 := testRequest(t, repo, "POST", "/api/shorten", inputBuf.String())
+	result4, body4 := testRequest(t, config, repo, "POST", "/api/shorten", inputBuf.String())
 	assert.Equal(t, 201, result4.StatusCode);
 	assert.Equal(t, "application/json", result4.Header.Get("Content-Type"));	
 	assert.Equal(t, outputBuf.String(), body4);

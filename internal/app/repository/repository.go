@@ -8,6 +8,7 @@ import (
 type Repositorier interface {
   Load(shortURL string) (string, error)
   Store(url string) (string, error)
+  GetBaseURL() string
 }
 
 
@@ -20,12 +21,16 @@ type Result struct {
 }
 
 type Repo struct {
+	BaseURL string
 	items []Item
 }
 
 
-func New()*Repo{
-	repo := &Repo{}
+func New(baseURL string)*Repo{
+
+	repo := &Repo{
+		BaseURL: baseURL,
+		}
 	return repo 
 }
 
@@ -51,4 +56,8 @@ func (r *Repo) Store(url string) (string, error) {
     r.items = append(r.items, newItem)	
     result := len(r.items)
    	return strconv.Itoa(result), nil
+}
+
+func (r *Repo) GetBaseURL() string {
+	return r.BaseURL
 }
