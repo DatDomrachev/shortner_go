@@ -34,7 +34,7 @@ func testRequest(t *testing.T, repo *repository.Repo, method, path, body string)
 		SimpleWriteHandler(repo)(w, request)
 	}
 
-	if(method == "POST" && path =="/api/shortner_go") {
+	if(method == "POST" && path =="/api/shorten") {
 		SimpleJSONHandler(repo)(w, request)
 	}
 
