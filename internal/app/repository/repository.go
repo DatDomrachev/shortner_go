@@ -27,9 +27,11 @@ type Repo struct {
 
 
 func New(baseURL string)*Repo{
+	var items []Item
 
 	repo := &Repo{
 		BaseURL: baseURL,
+		items: items,
 		}
 	return repo 
 }

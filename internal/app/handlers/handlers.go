@@ -44,7 +44,7 @@ func SimpleWriteHandler(repo repository.Repositorier) func(w http.ResponseWriter
 		    return
 	    }
 
-	   resp := repo.GetBaseURL() + result
+	   resp := repo.GetBaseURL() + "/" + result
 
 	   w.Header().Set("content-type", "application/json")
 	   w.WriteHeader(http.StatusCreated)
@@ -73,7 +73,7 @@ func SimpleJSONHandler(repo repository.Repositorier) func(w http.ResponseWriter,
 
 	   
 
-	    newResult := repository.Result{ShortURL: repo.GetBaseURL() + result}
+	    newResult := repository.Result{ShortURL: repo.GetBaseURL() +"/"+result}
 
 	    w.Header().Set("content-type", "application/json")
 	    w.WriteHeader(http.StatusCreated)

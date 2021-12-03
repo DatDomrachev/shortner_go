@@ -18,12 +18,12 @@ import (
 
 func testRequest(t *testing.T, config *config.Config, repo *repository.Repo, method, path, body string) (*http.Response, string) {
 	
-	request := httptest.NewRequest(method, config.Address+path, nil) 
+	request := httptest.NewRequest(method, path, nil) 
 
 	if (body != "") {
 		var content = []byte(body)
 		reqContent := bytes.NewBuffer(content)
-		request = httptest.NewRequest(method, config.Address+path, reqContent)
+		request = httptest.NewRequest(method, path, reqContent)
 	}
 	
 
@@ -64,7 +64,7 @@ func TestRouter(t *testing.T) {
 	result1, body1 := testRequest(t, config, repo, "POST", "/", "http://google.com")
 	assert.Equal(t, 201, result1.StatusCode);
 	assert.Equal(t, "application/json", result1.Header.Get("Content-Type"));	
-	assert.Equal(t, config.BaseURL + "1", body1);
+	assert.Equal(t, config.BaseURL + "/1", body1);
 	defer result1.Body.Close()	
 
 	result2, body2 := testRequest(t, config, repo, "GET", "/1", "")
@@ -89,7 +89,7 @@ func TestRouter(t *testing.T) {
 	    return
 	}
 
-	newResult := repository.Result{ShortURL:config.BaseURL + "2"}	
+	newResult := repository.Result{ShortURL:config.BaseURL + "/2"}	
 	outputBuf := bytes.NewBuffer([]byte{})
     if err := json.NewEncoder(outputBuf).Encode(newResult); err != nil {
 		log.Println(err.Error());
