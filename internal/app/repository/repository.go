@@ -102,6 +102,7 @@ func (r *Repo) GetBaseURL() string {
 	return r.BaseURL
 }
 
+
 func (r* Repo) readFromFile(ID int) (string, error) {
 	file, err := os.OpenFile(r.StoragePath, os.O_RDONLY|os.O_CREATE, 0777)
 
@@ -116,17 +117,16 @@ func (r* Repo) readFromFile(ID int) (string, error) {
 	row :=0
   for scanner.Scan() {
 
-	  data := scanner.Bytes()
-
-	  item := Item{}
-	  err := json.Unmarshal(data, &item)
-	  if err != nil {
-	      return "", err
-	  }
-
-	 
-
 	  if row == ID-1 {
+	  	data := scanner.Bytes()
+
+	  	item := Item{}
+	  	err := json.Unmarshal(data, &item)
+	  	
+	  	if err != nil {
+	    	  return "", err
+	  	}
+
 	  	return item.FullURL, nil
 	  }
 
@@ -180,7 +180,7 @@ func (r* Repo) countFileLines() (int, error) {
   defer file.Close()
 
   scanner:= bufio.NewScanner(file)
-  
+
 	row := 0
   for scanner.Scan() {
   	row++
