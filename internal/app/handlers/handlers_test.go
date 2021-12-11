@@ -56,6 +56,7 @@ func testRequest(t *testing.T, config *config.Config, repo *repository.Repo, met
 func TestRouter(t *testing.T) {
 	
 	config, err := config.GetConfig() 
+	config.InitFlags()
 	if err != nil {
 		log.Printf("failed to configurate:+%v\n", err)
 	}

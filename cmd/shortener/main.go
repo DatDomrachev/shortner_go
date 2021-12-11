@@ -16,6 +16,8 @@ import (
 func main() {
 
 	config, err := config.GetConfig()
+	config.InitFlags()
+
 	if err != nil {
 		log.Printf("failed to configurate:+%v\n", err)
 	}
