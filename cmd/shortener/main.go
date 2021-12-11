@@ -20,7 +20,7 @@ func main() {
 		log.Printf("failed to configurate:+%v\n", err)
 	}
 
-	repo := repository.New(config.BaseURL)
+	repo := repository.New(config.BaseURL, config.StoragePath)
 	s:= server.New(config.Address, repo)
 
 	c := make(chan os.Signal, 1)
