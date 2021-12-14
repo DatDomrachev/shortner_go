@@ -1,22 +1,21 @@
 package repository
 
 import (
-	"strconv"
-	"strings"
-	"os"
 	"bufio"
 	"encoding/json"
+	"os"
+	"strconv"
+	"strings"
+	"log"
 )
 
 type Repositorier interface {
-  Load(shortURL string) (string, error)
-  Store(url string) (string, error)
-  GetBaseURL() string
+	Load(shortURL string) (string, error)
+	Store(url string) (string, error)
 }
 
-
 type Item struct {
-	FullURL  string `json:"url"`
+	FullURL string `json:"url"`
 }
 
 type Result struct {
@@ -24,21 +23,28 @@ type Result struct {
 }
 
 type Repo struct {
-	BaseURL string
 	StoragePath string
-	items []Item
+	items       []Item
 }
 
-
-func New(baseURL string, storagePath string)*Repo{
+func New(storagePath string) *Repo {
 	var items []Item
 
 	repo := &Repo{
-		BaseURL: baseURL,
 		StoragePath: storagePath,
-		items: items,
+		items:       items,
+	}
+
+	if storagePath != "" {
+		err := repo.readFromFile()
+
+		if err != nil {
+			log.Fatalf("failed to Load file:+%v", err)
 		}
-	return repo 
+	}
+
+
+	return repo
 }
 
 func (r *Repo) Load(shortURL string) (string, error) {
@@ -48,144 +54,92 @@ func (r *Repo) Load(shortURL string) (string, error) {
 	id, err := strconv.Atoi(param)
 
 	if err != nil {
-    return "", err
-  }
-
-
-	if (r.StoragePath != "") {
-	  result, err := r.readFromFile(id);
-	
-		if err != nil {
-    	return "", err
-  	}
-
-  	return result, nil  
+		return "", err
 	}
 
-	
 	for i := range r.items {
 		if i == id-1 {
 			return r.items[i].FullURL, nil
-		}	
+		}
 	}
-	return "", err	
+	return "", err
 }
 
 func (r *Repo) Store(url string) (string, error) {
-	  result := 0
-	  newItem := Item{FullURL: url}
-	 
-	  if r.StoragePath == "" {
-    	r.items = append(r.items, newItem)	
-    	result = len(r.items)
-  	} else {
-   		
-   		err := r.writeToFile(newItem)   
-  		
-  		if err != nil {
-    		return "", err
-  		}
+	result := 0
+	newItem := Item{FullURL: url}
+	r.items = append(r.items, newItem)
+	result = len(r.items)
 
-  		result, err = r.countFileLines()
+	if r.StoragePath != "" {
 
-  		if err != nil {
-    		return "", err
-  		}
-  	
-  	}
+		err := r.writeToFile(newItem)
 
-   	
-   	return strconv.Itoa(result), nil
-}
+		if err != nil {
+			return "", err
+		}
 
-func (r *Repo) GetBaseURL() string {
-	return r.BaseURL
-}
-
-
-func (r* Repo) readFromFile(ID int) (string, error) {
-	file, err := os.OpenFile(r.StoragePath, os.O_RDONLY|os.O_CREATE, 0777)
-
-	if err != nil {
-    return "", err
-  }
-
-  defer file.Close()
-
-	scanner:= bufio.NewScanner(file)
-	
-	row :=0
-  for scanner.Scan() {
-
-	  if row == ID-1 {
-	  	data := scanner.Bytes()
-
-	  	item := Item{}
-	  	err := json.Unmarshal(data, &item)
-	  	
-	  	if err != nil {
-	    	  return "", err
-	  	}
-
-	  	return item.FullURL, nil
-	  }
-
-	  row++
 	}
 
-	return "", err	
+	return strconv.Itoa(result), nil
 }
 
 
-func (r* Repo) writeToFile(newItem Item) error {
-	
-	data, err := json.Marshal(&newItem)
-  
-  if err != nil {
-      return err
-  }
-  
-
-  file, err := os.OpenFile(r.StoragePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
-	
-	if err != nil {
-        return err
-  }
-
-  defer file.Close()
-
-   writer:= bufio.NewWriter(file)
-
-
-  if _, err := writer.Write(data); err != nil {
-        return err
-  }
-
-  if err := writer.WriteByte('\n'); err != nil {
-      return err
-  }
-
-  return writer.Flush()
-
-}
-
-
-func (r* Repo) countFileLines() (int, error) {
+func (r *Repo) readFromFile() (error) {
 	file, err := os.OpenFile(r.StoragePath, os.O_RDONLY|os.O_CREATE, 0777)
 
 	if err != nil {
-    return 0, err
-  }
-  
-  defer file.Close()
+		return err
+	}
 
-  scanner:= bufio.NewScanner(file)
+	defer file.Close()
 
-	row := 0
-  for scanner.Scan() {
-  	row++
-  }
+	scanner := bufio.NewScanner(file)
 
-  return row, nil;
+	for scanner.Scan() {
+	
+		data := scanner.Bytes()
+
+		item := Item{}
+		err := json.Unmarshal(data, &item)
+
+		if err != nil {
+			return err
+		}
+
+		r.items = append(r.items, item)
+
+	}
+
+	return nil
+}
+
+func (r *Repo) writeToFile(newItem Item) error {
+
+	data, err := json.Marshal(&newItem)
+
+	if err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(r.StoragePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
+
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+
+	if _, err := writer.Write(data); err != nil {
+		return err
+	}
+
+	if err := writer.WriteByte('\n'); err != nil {
+		return err
+	}
+
+	return writer.Flush()
 
 }

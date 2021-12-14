@@ -1,29 +1,27 @@
 package main
 
 import (
-    "github.com/DatDomrachev/shortner_go/internal/app/server"
-    "github.com/DatDomrachev/shortner_go/internal/app/repository"
-    "github.com/DatDomrachev/shortner_go/internal/app/config"
-    "context"
-    "os"
-	"os/signal"
+	"context"
+	"github.com/DatDomrachev/shortner_go/internal/app/config"
+	"github.com/DatDomrachev/shortner_go/internal/app/repository"
+	"github.com/DatDomrachev/shortner_go/internal/app/server"
 	"log"
-
+	"os"
+	"os/signal"
 )
-
-
 
 func main() {
 
-	config, err := config.GetConfig()
-	config.InitFlags()
+	config, err := config.New()
 
 	if err != nil {
-		log.Printf("failed to configurate:+%v\n", err)
+		log.Fatalf("failed to configurate:+%v", err)
 	}
 
-	repo := repository.New(config.BaseURL, config.StoragePath)
-	s:= server.New(config.Address, repo)
+	config.InitFlags()
+
+	repo := repository.New(config.StoragePath)
+	s := server.New(config.Address, config.BaseURL, repo)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -39,5 +37,5 @@ func main() {
 	if err := s.Run(ctx); err != nil {
 		log.Printf("failed to serve:+%v\n", err)
 	}
-	
+
 }
