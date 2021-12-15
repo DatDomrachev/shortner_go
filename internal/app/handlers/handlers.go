@@ -28,13 +28,13 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string) func(w htt
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		result, err := repo.Store(string(data))
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -53,14 +53,14 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string) func(w http
 		var url repository.Item
 
 		if err := json.NewDecoder(r.Body).Decode(&url); err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		result, err := repo.Store(url.FullURL)
 
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -71,7 +71,7 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string) func(w http
 
 		buf := bytes.NewBuffer([]byte{})
 		if err := json.NewEncoder(buf).Encode(newResult); err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

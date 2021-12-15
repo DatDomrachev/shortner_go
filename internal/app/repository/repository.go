@@ -66,10 +66,9 @@ func (r *Repo) Load(shortURL string) (string, error) {
 }
 
 func (r *Repo) Store(url string) (string, error) {
-	result := 0
 	newItem := Item{FullURL: url}
 	r.items = append(r.items, newItem)
-	result = len(r.items)
+	result := len(r.items)
 
 	if r.StoragePath != "" {
 
