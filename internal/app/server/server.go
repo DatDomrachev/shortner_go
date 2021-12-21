@@ -9,6 +9,9 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"compress/gzip"
+	"strings"
+	"io"
 )
 
 type Server interface {
@@ -20,6 +23,15 @@ type srv struct {
 	baseURL string
 	repo    repository.Repositorier
 }
+
+type gzipWriter struct {
+    http.ResponseWriter
+    Writer io.Writer
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) {
+    return w.Writer.Write(b)
+} 
 
 func New(address string, baseURL string, repo repository.Repositorier) *srv {
 	server := &srv{
@@ -69,8 +81,30 @@ func (s *srv) Run(ctx context.Context) (err error) {
 func (s *srv) ConfigureRouter() *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
+	router.Use(GzipHandle)
 	router.Get("/{Id}", handlers.SimpleReadHandler(s.repo))
 	router.Post("/", handlers.SimpleWriteHandler(s.repo, s.baseURL))
 	router.Post("/api/shorten", handlers.SimpleJSONHandler(s.repo, s.baseURL))
 	return router
+}
+
+
+func GzipHandle(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+      
+        if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+            next.ServeHTTP(w, r)
+            return
+        }
+
+        gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+        if err != nil {
+            io.WriteString(w, err.Error())
+            return
+        }
+        defer gz.Close()
+
+        w.Header().Set("Content-Encoding", "gzip")
+        next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+    })
 }
