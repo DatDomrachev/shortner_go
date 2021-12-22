@@ -108,25 +108,28 @@ func GzipHandle(next http.Handler) http.Handler {
         }
         defer gz.Close()
 
-        
-       	reader, err := gzip.NewReader(r.Body)
+        if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+            reader, err := gzip.NewReader(r.Body)
        		
-        if err != nil {
-            io.WriteString(w, err.Error())
-            return
+	        if err != nil {
+	            io.WriteString(w, err.Error())
+	            return
+	        }
+
+	        defer reader.Close()
+
+	        b, err := ioutil.ReadAll(reader)
+
+	        if err != nil {
+	            io.WriteString(w, err.Error())
+	            return
+	        }
+
+
+	        r.Body = ioutil.NopCloser(bytes.NewBuffer(b))    
         }
 
-        defer reader.Close()
-
-        b, err := ioutil.ReadAll(reader)
-
-        if err != nil {
-            io.WriteString(w, err.Error())
-            return
-        }
-
-       
-        r.Body = ioutil.NopCloser(bytes.NewBuffer(b))        
+           
 
         w.Header().Set("Content-Encoding", "gzip")
         next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
