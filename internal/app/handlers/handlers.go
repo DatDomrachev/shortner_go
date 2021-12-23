@@ -8,6 +8,8 @@ import (
 	"net/http"
 )
 
+
+type contextKey string
 func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fullURL, err := repo.Load(r.URL.Path)
@@ -32,7 +34,7 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string) func(w htt
 			return
 		}
 
-		user := r.Context().Value("user_token").(string)
+		user := r.Context().Value(contextKey("user_token")).(string)
 		result, err := repo.Store(string(data), user)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -58,7 +60,7 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string) func(w http
 			return
 		}
 
-		user := r.Context().Value("user_token").(string)
+		user := r.Context().Value(contextKey("user_token")).(string)
 		result, err := repo.Store(url.FullURL, user)
 
 		if err != nil {
@@ -85,7 +87,7 @@ func AllMyURLSHandler(repo repository.Repositorier, baseURL string) func(w http.
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		
-		user := r.Context().Value("user_token").(string)
+		user := r.Context().Value(contextKey("user_token")).(string)
 		items := repo.GetByUser(user)
 
 		if len(items) == 0 {

@@ -35,6 +35,8 @@ type gzipWriter struct {
     Writer io.Writer
 }
 
+type contextKey string
+
 func (w gzipWriter) Write(b []byte) (int, error) {
     return w.Writer.Write(b)
 } 
@@ -207,7 +209,7 @@ func CookieManager(next http.Handler) http.Handler {
 		}
 
     	http.SetCookie(w, cookie);
-    	ctx := context.WithValue(r.Context(), "user_token", cookie.Value)
+    	ctx := context.WithValue(r.Context(), contextKey("user_token"), cookie.Value)
     	next.ServeHTTP(w, r.WithContext(ctx))
     })
 }    
