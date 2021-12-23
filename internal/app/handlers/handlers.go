@@ -32,7 +32,8 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string) func(w htt
 			return
 		}
 
-		result, err := repo.Store(string(data))
+		user := r.Context().Value("user_token").(string)
+		result, err := repo.Store(string(data), user)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -57,7 +58,8 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string) func(w http
 			return
 		}
 
-		result, err := repo.Store(url.FullURL)
+		user := r.Context().Value("user_token").(string)
+		result, err := repo.Store(url.FullURL, user)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -78,3 +80,35 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string) func(w http
 		w.Write(buf.Bytes())
 	}
 }
+
+func AllMyURLSHandler(repo repository.Repositorier, baseURL string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		
+		user := r.Context().Value("user_token").(string)
+		items := repo.GetByUser(user)
+
+		if len(items) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+
+		for i := range items {
+			items[i].ShortURL = baseURL + "/" + items[i].ShortURL
+		}
+
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		buf := bytes.NewBuffer([]byte{})
+		if err := json.NewEncoder(buf).Encode(items); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(buf.Bytes())
+	
+	}		
+}
+

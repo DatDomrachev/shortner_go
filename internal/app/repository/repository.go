@@ -11,12 +11,20 @@ import (
 
 type Repositorier interface {
 	Load(shortURL string) (string, error)
-	Store(url string) (string, error)
+	Store(url string, userToken string) (string, error)
+	GetByUser(userToken string) ([]MyItem)
 }
 
 type Item struct {
 	FullURL string `json:"url"`
+	UserToken string `json:"user_token"`
 }
+
+type MyItem struct {
+	ShortURL string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
 
 type Result struct {
 	ShortURL string `json:"result"`
@@ -47,6 +55,24 @@ func New(storagePath string) *Repo {
 	return repo
 }
 
+
+func (r *Repo) GetByUser(user string) ([]MyItem) {
+
+	var myItems []MyItem
+
+	for i := range r.items {
+		if user == r.items[i].UserToken {
+		  myItem := MyItem{
+		 		ShortURL: strconv.Itoa(i+1),
+		 		OriginalURL: r.items[i].FullURL,
+			}
+			myItems = append(myItems, myItem)
+		}
+	}
+
+	return myItems
+}
+
 func (r *Repo) Load(shortURL string) (string, error) {
 
 	param := strings.TrimPrefix(shortURL, `/`)
@@ -65,8 +91,8 @@ func (r *Repo) Load(shortURL string) (string, error) {
 	return "", err
 }
 
-func (r *Repo) Store(url string) (string, error) {
-	newItem := Item{FullURL: url}
+func (r *Repo) Store(url string, userToken string) (string, error) {
+	newItem := Item{FullURL: url, UserToken: userToken}
 	r.items = append(r.items, newItem)
 	result := len(r.items)
 

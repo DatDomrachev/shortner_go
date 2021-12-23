@@ -14,6 +14,10 @@ import (
 	"io"
 	"io/ioutil"
 	"bytes"
+	"encoding/hex"
+	"crypto/hmac"
+    "crypto/sha256"
+    "crypto/rand"
 )
 
 type Server interface {
@@ -84,9 +88,11 @@ func (s *srv) ConfigureRouter() *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(GzipHandle)
+	router.Use(CookieManager)
 	router.Get("/{Id}", handlers.SimpleReadHandler(s.repo))
 	router.Post("/", handlers.SimpleWriteHandler(s.repo, s.baseURL))
 	router.Post("/api/shorten", handlers.SimpleJSONHandler(s.repo, s.baseURL))
+	router.Get("/user/urls", handlers.AllMyURLSHandler(s.repo, s.baseURL))
 	return router
 }
 
@@ -135,3 +141,73 @@ func GzipHandle(next http.Handler) http.Handler {
         next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
     })
 }
+
+
+func newCookie(key []byte) (cookie *http.Cookie, err error) {
+	
+	//рандомный ключ
+	src := make([]byte, 4)
+    _, err = rand.Read(src)
+
+    if err != nil {
+        return nil, err
+    }
+
+    //подпись	
+    h := hmac.New(sha256.New, key)
+    h.Write(src)
+
+    cookie = &http.Cookie {
+	        	Name:   "user_token",
+	        	Value:  string(h.Sum(nil)),
+	        	MaxAge: 300,
+	        }	
+
+    return cookie, nil;
+}
+
+func CookieManager(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    	var secretkey = []byte("secret key of My Castle")
+
+    	var (
+	        data []byte // декодированное сообщение с подписью
+	        err  error
+	        sign []byte // HMAC-подпись от идентификатора
+	    )
+
+    	cookie, err := r.Cookie("user_token")
+
+    	if (err == nil) {
+
+	    	userKey := cookie.Value
+
+	    	data, err = hex.DecodeString(userKey)
+
+	    	if err != nil {
+		        log.Fatalf("CookieManager error:%+v", err)
+		    }
+		    
+		    h := hmac.New(sha256.New, secretkey)
+		    h.Write(data[:4])
+		    sign = h.Sum(nil) 
+
+		    if !hmac.Equal(sign, data[4:]) {
+		        
+		    	cookie, err = newCookie(secretkey)
+		    }
+
+    	} else {
+
+    		cookie, err = newCookie(secretkey)
+    	}
+
+    	if err != nil {
+		    log.Fatalf("CookieManager error:%+v", err)
+		}
+
+    	http.SetCookie(w, cookie);
+    	ctx := context.WithValue(r.Context(), "user_token", cookie.Value)
+    	next.ServeHTTP(w, r.WithContext(ctx))
+    })
+}    
