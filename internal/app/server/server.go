@@ -166,7 +166,7 @@ func newCookie(key []byte) (cookie *http.Cookie, err error) {
 	id:=rand.Uint32()
     binary.BigEndian.PutUint32(src, id)
 	 
-    log.Println("New ID:", id)
+    
     //подпись	
     h := hmac.New(sha256.New, key)
     h.Write(src)
@@ -188,7 +188,7 @@ func CookieManager(next http.Handler) http.Handler {
     	cookie, err := r.Cookie("user_token")
 
     	if (err == nil) {
-    		log.Print("cookie set")	
+    		
 	    	userKey := cookie.Value
 
 	    	data, err := hex.DecodeString(userKey)
@@ -197,14 +197,14 @@ func CookieManager(next http.Handler) http.Handler {
 		        log.Fatalf("CookieManager error:%+v", err)
 		    }
 		    
-		    id:=binary.BigEndian.Uint32(data[:4])
-		    log.Println("Old ID:", id);	
+		   
+		   
 		    h := hmac.New(sha256.New, secretkey)
 		    h.Write(data[:4])
 		    sign := h.Sum(nil) 
 
 		    if !hmac.Equal(sign, data[4:]) {
-		        log.Print("cookie_wrong")
+		       
 		    	cookie, err = newCookie(secretkey)
 		    }
 

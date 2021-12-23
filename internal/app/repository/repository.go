@@ -84,7 +84,6 @@ func (r *Repo) Load(shortURL string, userToken string) (string, error) {
 	}
 
 	for i := range r.items {
-		log.Print(r.items[i].UserToken)
 		if i == id-1 && r.items[i].UserToken == userToken {
 			return r.items[i].FullURL, nil
 		}
