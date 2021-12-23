@@ -10,7 +10,7 @@ import (
 )
 
 type Repositorier interface {
-	Load(shortURL string) (string, error)
+	Load(shortURL string, userToken string) (string, error)
 	Store(url string, userToken string) (string, error)
 	GetByUser(userToken string) ([]MyItem)
 }
@@ -73,7 +73,7 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 	return myItems
 }
 
-func (r *Repo) Load(shortURL string) (string, error) {
+func (r *Repo) Load(shortURL string, userToken string) (string, error) {
 
 	param := strings.TrimPrefix(shortURL, `/`)
 
@@ -84,7 +84,7 @@ func (r *Repo) Load(shortURL string) (string, error) {
 	}
 
 	for i := range r.items {
-		if i == id-1 {
+		if i == id-1 && r.items[i].UserToken == userToken {
 			return r.items[i].FullURL, nil
 		}
 	}

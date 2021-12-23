@@ -6,13 +6,13 @@ import (
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
 	"io/ioutil"
 	"net/http"
+	"log"
 )
 
 
-type contextKey string
-func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
+func SimpleReadHandler(repo repository.Repositorier, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fullURL, err := repo.Load(r.URL.Path)
+		fullURL, err := repo.Load(r.URL.Path, userToken)
 
 		if err != nil {
 			http.Error(w, "Not found", http.StatusBadRequest)
@@ -26,16 +26,16 @@ func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter,
 	}
 }
 
-func SimpleWriteHandler(repo repository.Repositorier, baseURL string) func(w http.ResponseWriter, r *http.Request) {
+func SimpleWriteHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Print("here")
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		user := r.Context().Value(contextKey("user_token")).(string)
-		result, err := repo.Store(string(data), user)
+		result, err := repo.Store(string(data), userToken)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -50,7 +50,7 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string) func(w htt
 	}
 }
 
-func SimpleJSONHandler(repo repository.Repositorier, baseURL string) func(w http.ResponseWriter, r *http.Request) {
+func SimpleJSONHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		var url repository.Item
@@ -60,8 +60,7 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string) func(w http
 			return
 		}
 
-		user := r.Context().Value(contextKey("user_token")).(string)
-		result, err := repo.Store(url.FullURL, user)
+		result, err := repo.Store(url.FullURL, userToken)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -83,12 +82,10 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string) func(w http
 	}
 }
 
-func AllMyURLSHandler(repo repository.Repositorier, baseURL string) func(w http.ResponseWriter, r *http.Request) {
+func AllMyURLSHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		
-		user := r.Context().Value(contextKey("user_token")).(string)
-		items := repo.GetByUser(user)
+		items := repo.GetByUser(userToken)
 
 		if len(items) == 0 {
 			w.WriteHeader(http.StatusNoContent)

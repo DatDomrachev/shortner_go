@@ -91,10 +91,23 @@ func (s *srv) ConfigureRouter() *chi.Mux {
 	router.Use(middleware.Logger)
 	router.Use(GzipHandle)
 	router.Use(CookieManager)
-	router.Get("/{Id}", handlers.SimpleReadHandler(s.repo))
-	router.Post("/", handlers.SimpleWriteHandler(s.repo, s.baseURL))
-	router.Post("/api/shorten", handlers.SimpleJSONHandler(s.repo, s.baseURL))
-	router.Get("/user/urls", handlers.AllMyURLSHandler(s.repo, s.baseURL))
+
+	router.Get("/{Id}", func(rw http.ResponseWriter, r *http.Request) {
+    	u := r.Context().Value(contextKey("user_token")).(string)
+    	handlers.SimpleReadHandler(s.repo,u)(rw,r)
+   	}) 
+	router.Post("/", func(rw http.ResponseWriter, r *http.Request) {
+    	u := r.Context().Value(contextKey("user_token")).(string)
+    	handlers.SimpleWriteHandler(s.repo, s.baseURL, u)(rw,r)
+    })
+	router.Post("/api/shorten", func(rw http.ResponseWriter, r *http.Request) {
+    	u := r.Context().Value(contextKey("user_token")).(string)
+    	handlers.SimpleJSONHandler(s.repo, s.baseURL, u)(rw,r)
+    })
+	router.Get("/user/urls",  func(rw http.ResponseWriter, r *http.Request) {
+    	u := r.Context().Value(contextKey("user_token")).(string)
+    	handlers.AllMyURLSHandler(s.repo, s.baseURL,u)(rw,r)
+    })
 	return router
 }
 
@@ -161,7 +174,7 @@ func newCookie(key []byte) (cookie *http.Cookie, err error) {
 
     cookie = &http.Cookie {
 	        	Name:   "user_token",
-	        	Value:  string(h.Sum(nil)),
+	        	Value:  hex.EncodeToString(h.Sum(nil)),
 	        	MaxAge: 300,
 	        }	
 
@@ -209,7 +222,9 @@ func CookieManager(next http.Handler) http.Handler {
 		}
 
     	http.SetCookie(w, cookie);
+
     	ctx := context.WithValue(r.Context(), contextKey("user_token"), cookie.Value)
+    	log.Print(ctx.Value(contextKey("user_token")));
     	next.ServeHTTP(w, r.WithContext(ctx))
     })
 }    
