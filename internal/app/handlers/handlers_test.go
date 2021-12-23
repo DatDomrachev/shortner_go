@@ -28,15 +28,15 @@ func testRequest(t *testing.T, config *config.Config, repo *repository.Repo, met
 	w := httptest.NewRecorder()
 
 	if method == "POST" && path == "/" {
-		SimpleWriteHandler(repo, config.BaseURL)(w, request)
+		SimpleWriteHandler(repo, config.BaseURL, "1")(w, request)
 	}
 
 	if method == "POST" && path == "/api/shorten" {
-		SimpleJSONHandler(repo, config.BaseURL)(w, request)
+		SimpleJSONHandler(repo, config.BaseURL, "1")(w, request)
 	}
 
 	if method == "GET" {
-		SimpleReadHandler(repo)(w, request)
+		SimpleReadHandler(repo)(w, request, "1")
 	}
 
 	result := w.Result()
