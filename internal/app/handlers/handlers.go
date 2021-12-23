@@ -6,7 +6,6 @@ import (
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
 	"io/ioutil"
 	"net/http"
-	"log"
 )
 
 
@@ -28,7 +27,6 @@ func SimpleReadHandler(repo repository.Repositorier, userToken string) func(w ht
 
 func SimpleWriteHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Print("here")
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

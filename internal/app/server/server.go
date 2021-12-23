@@ -17,7 +17,8 @@ import (
 	"encoding/hex"
 	"crypto/hmac"
     "crypto/sha256"
-    "crypto/rand"
+    "math/rand"
+    "encoding/binary"
 )
 
 type Server interface {
@@ -94,7 +95,7 @@ func (s *srv) ConfigureRouter() *chi.Mux {
 
 	router.Get("/{Id}", func(rw http.ResponseWriter, r *http.Request) {
     	u := r.Context().Value(contextKey("user_token")).(string)
-    	handlers.SimpleReadHandler(s.repo,u)(rw,r)
+    	handlers.SimpleReadHandler(s.repo, u)(rw,r)
    	}) 
 	router.Post("/", func(rw http.ResponseWriter, r *http.Request) {
     	u := r.Context().Value(contextKey("user_token")).(string)
@@ -160,21 +161,19 @@ func GzipHandle(next http.Handler) http.Handler {
 
 func newCookie(key []byte) (cookie *http.Cookie, err error) {
 	
-	//рандомный ключ
+	//рандомный id
 	src := make([]byte, 4)
-    _, err = rand.Read(src)
-
-    if err != nil {
-        return nil, err
-    }
-
+	id:=rand.Uint32()
+    binary.BigEndian.PutUint32(src, id)
+	 
+    log.Println("New ID:", id)
     //подпись	
     h := hmac.New(sha256.New, key)
     h.Write(src)
 
     cookie = &http.Cookie {
 	        	Name:   "user_token",
-	        	Value:  hex.EncodeToString(h.Sum(nil)),
+	        	Value:  hex.EncodeToString(src) + hex.EncodeToString(h.Sum(nil)),
 	        	MaxAge: 300,
 	        }	
 
@@ -185,30 +184,27 @@ func CookieManager(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     	var secretkey = []byte("secret key of My Castle")
 
-    	var (
-	        data []byte // декодированное сообщение с подписью
-	        err  error
-	        sign []byte // HMAC-подпись от идентификатора
-	    )
 
     	cookie, err := r.Cookie("user_token")
 
     	if (err == nil) {
-
+    		log.Print("cookie set")	
 	    	userKey := cookie.Value
 
-	    	data, err = hex.DecodeString(userKey)
+	    	data, err := hex.DecodeString(userKey)
 
 	    	if err != nil {
 		        log.Fatalf("CookieManager error:%+v", err)
 		    }
 		    
+		    id:=binary.BigEndian.Uint32(data[:4])
+		    log.Println("Old ID:", id);	
 		    h := hmac.New(sha256.New, secretkey)
 		    h.Write(data[:4])
-		    sign = h.Sum(nil) 
+		    sign := h.Sum(nil) 
 
 		    if !hmac.Equal(sign, data[4:]) {
-		        
+		        log.Print("cookie_wrong")
 		    	cookie, err = newCookie(secretkey)
 		    }
 
