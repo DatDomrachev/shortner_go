@@ -206,16 +206,20 @@ func CookieManager(next http.Handler) http.Handler {
 		    if !hmac.Equal(sign, data[4:]) {
 		       
 		    	cookie, err = newCookie(secretkey)
+		    	if err != nil {
+				    log.Fatalf("CookieManager error:%+v", err)
+				}
 		    }
 
     	} else {
 
     		cookie, err = newCookie(secretkey)
+    		if err != nil {
+			    log.Fatalf("CookieManager error:%+v", err)
+			}
     	}
 
-    	if err != nil {
-		    log.Fatalf("CookieManager error:%+v", err)
-		}
+    	
 
     	http.SetCookie(w, cookie);
 
