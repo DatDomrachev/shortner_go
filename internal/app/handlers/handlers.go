@@ -9,9 +9,9 @@ import (
 )
 
 
-func SimpleReadHandler(repo repository.Repositorier, userToken string) func(w http.ResponseWriter, r *http.Request) {
+func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fullURL, err := repo.Load(r.URL.Path, userToken)
+		fullURL, err := repo.Load(r.URL.Path)
 
 		if err != nil {
 			http.Error(w, "Not found", http.StatusBadRequest)

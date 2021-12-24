@@ -36,7 +36,7 @@ func testRequest(t *testing.T, config *config.Config, repo *repository.Repo, met
 	}
 
 	if method == "GET" {
-		SimpleReadHandler(repo, "1")(w, request)
+		SimpleReadHandler(repo)(w, request)
 	}
 
 	result := w.Result()

@@ -93,10 +93,7 @@ func (s *srv) ConfigureRouter() *chi.Mux {
 	router.Use(GzipHandle)
 	router.Use(CookieManager)
 
-	router.Get("/{Id}", func(rw http.ResponseWriter, r *http.Request) {
-    	u := r.Context().Value(contextKey("user_token")).(string)
-    	handlers.SimpleReadHandler(s.repo, u)(rw,r)
-   	}) 
+	router.Get("/{Id}", handlers.SimpleReadHandler(s.repo)) 
 	router.Post("/", func(rw http.ResponseWriter, r *http.Request) {
     	u := r.Context().Value(contextKey("user_token")).(string)
     	handlers.SimpleWriteHandler(s.repo, s.baseURL, u)(rw,r)
