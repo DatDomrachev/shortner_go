@@ -20,8 +20,6 @@ func SimpleReadHandler(repo repository.Repositorier, userToken string) func(w ht
 
 		
 		http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
-		return
-		
 	}
 }
 
