@@ -15,13 +15,13 @@ func SimpleReadHandler(repo repository.Repositorier, userToken string) func(w ht
 
 		if err != nil {
 			http.Error(w, "Not found", http.StatusBadRequest)
+			return
 		}
 
-		if fullURL != "" {
-			http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
-		}
-
-		http.Error(w, "Not found", http.StatusBadRequest)
+		
+		http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
+		return
+		
 	}
 }
 

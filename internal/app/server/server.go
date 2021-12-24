@@ -105,7 +105,7 @@ func (s *srv) ConfigureRouter() *chi.Mux {
     	u := r.Context().Value(contextKey("user_token")).(string)
     	handlers.SimpleJSONHandler(s.repo, s.baseURL, u)(rw,r)
     })
-	router.Get("/user/urls",  func(rw http.ResponseWriter, r *http.Request) {
+	router.Get("/user/urls", func(rw http.ResponseWriter, r *http.Request) {
     	u := r.Context().Value(contextKey("user_token")).(string)
     	handlers.AllMyURLSHandler(s.repo, s.baseURL,u)(rw,r)
     })
@@ -220,7 +220,7 @@ func CookieManager(next http.Handler) http.Handler {
     	http.SetCookie(w, cookie);
 
     	ctx := context.WithValue(r.Context(), contextKey("user_token"), cookie.Value)
-    	log.Print(ctx.Value(contextKey("user_token")));
+    	
     	next.ServeHTTP(w, r.WithContext(ctx))
     })
 }    
