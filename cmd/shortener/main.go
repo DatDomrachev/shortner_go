@@ -21,6 +21,7 @@ func main() {
 
 	config.InitFlags()
 	db, err := database.New(config.DBURL) 
+	
 	if err != nil {
 		log.Fatalf("failed to configurate:+%v", err)
 	}

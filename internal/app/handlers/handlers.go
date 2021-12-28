@@ -114,7 +114,7 @@ func PingDB(db database.DBWorker) func(w http.ResponseWriter, r *http.Request) {
 
 		result := db.Ping()
 
-		if result == false {
+		if !result {
 			http.Error(w, "No connection to DB", http.StatusInternalServerError)
 			return
 		}
