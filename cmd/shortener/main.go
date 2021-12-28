@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/DatDomrachev/shortner_go/internal/app/config"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
+	"github.com/DatDomrachev/shortner_go/internal/app/database"
 	"github.com/DatDomrachev/shortner_go/internal/app/server"
 	"log"
 	"os"
@@ -19,9 +20,9 @@ func main() {
 	}
 
 	config.InitFlags()
-
+	db, err := database.New(config.DBURL) 
 	repo := repository.New(config.StoragePath)
-	s := server.New(config.Address, config.BaseURL, repo)
+	s := server.New(config.Address, config.BaseURL, repo, db)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

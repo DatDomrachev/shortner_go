@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/DatDomrachev/shortner_go/internal/app/handlers"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
+	"github.com/DatDomrachev/shortner_go/internal/app/database"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"log"
@@ -29,6 +30,7 @@ type srv struct {
 	address string
 	baseURL string
 	repo    repository.Repositorier
+	db    	database.DBWorker
 }
 
 type gzipWriter struct {
@@ -42,11 +44,12 @@ func (w gzipWriter) Write(b []byte) (int, error) {
     return w.Writer.Write(b)
 } 
 
-func New(address string, baseURL string, repo repository.Repositorier) *srv {
+func New(address string, baseURL string, repo repository.Repositorier, db database.DBWorker) *srv {
 	server := &srv{
 		address: address,
 		baseURL: baseURL,
 		repo:    repo,
+		db: 	 db,
 	}
 
 	return server
@@ -106,6 +109,7 @@ func (s *srv) ConfigureRouter() *chi.Mux {
     	u := r.Context().Value(contextKey("user_token")).(string)
     	handlers.AllMyURLSHandler(s.repo, s.baseURL,u)(rw,r)
     })
+    router.Get("/ping", handlers.PingDB(s.db))
 	return router
 }
 
