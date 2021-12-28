@@ -10,7 +10,7 @@ import (
 	"context"
 	"time"
 	"database/sql"
-  _ "github.com/jackc/pgx/v4"	 
+  _ "github.com/jackc/pgx/v4/stdlib"	 
 )
 
 type Repositorier interface {
