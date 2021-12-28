@@ -69,9 +69,9 @@ func New(storagePath string, databaseURL string) *Repo {
 	}
 
 
-	if databaseURL !="" {
+	if databaseURL != "" {
 		db, err := sql.Open("postgres", databaseURL)
-		if err == nil {
+		if err != nil {
 			log.Print(err.Error())
 			return repo
 		}
