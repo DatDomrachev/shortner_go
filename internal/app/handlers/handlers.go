@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
-	"github.com/DatDomrachev/shortner_go/internal/app/database"
 	"io/ioutil"
 	"net/http"
 )
@@ -109,10 +108,10 @@ func AllMyURLSHandler(repo repository.Repositorier, baseURL string, userToken st
 }
 
 
-func PingDB(db database.DBWorker) func(w http.ResponseWriter, r *http.Request) {
+func PingDB(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		result := db.Ping()
+		result := repo.PingDB()
 
 		if !result {
 			http.Error(w, "No connection to DB", http.StatusInternalServerError)

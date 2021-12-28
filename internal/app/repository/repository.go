@@ -7,12 +7,21 @@ import (
 	"strconv"
 	"strings"
 	"log"
+	"context"
+	"time"
+	"database/sql"
+  _ "github.com/jackc/pgx/v4"
 )
 
 type Repositorier interface {
 	Load(shortURL string) (string, error)
 	Store(url string, userToken string) (string, error)
 	GetByUser(userToken string) ([]MyItem)
+	PingDB()(bool)
+}
+
+type DataBase struct {
+	conn *sql.DB
 }
 
 type Item struct {
@@ -33,14 +42,20 @@ type Result struct {
 type Repo struct {
 	StoragePath string
 	items       []Item
+	DB					*DataBase 
 }
 
-func New(storagePath string) *Repo {
+func New(storagePath string, databaseURL string) *Repo {
 	var items []Item
 
+	dataBase := &DataBase {
+			conn: nil,
+	}
+
 	repo := &Repo{
-		StoragePath: storagePath,
+		StoragePath: storagePath, 
 		items:       items,
+		DB:					 dataBase,
 	}
 
 	if storagePath != "" {
@@ -49,6 +64,29 @@ func New(storagePath string) *Repo {
 		if err != nil {
 			log.Fatalf("failed to Load file:+%v", err)
 		}
+
+		return repo
+	}
+
+
+	if databaseURL !="" {
+		db, err := sql.Open("postgres", databaseURL)
+		if err == nil {
+			log.Print(err.Error())
+			return repo
+		}
+
+		if err := db.Ping(); err != nil {
+			log.Print(err.Error())
+			return repo
+		}
+
+		dataBase := &DataBase {
+			conn: db,
+		}
+
+		repo.DB = dataBase
+		
 	}
 
 
@@ -167,4 +205,18 @@ func (r *Repo) writeToFile(newItem Item) error {
 
 	return writer.Flush()
 
+}
+
+func (r *Repo) PingDB() (bool) {
+
+	var bgCtx = context.Background()		
+	ctx, cancel := context.WithTimeout(bgCtx, 2*time.Second)
+    defer cancel()
+    err:= r.DB.conn.PingContext(ctx)
+    if err != nil {
+       log.Print(err.Error())
+       return false;
+    }
+
+    return true;
 }
