@@ -208,6 +208,9 @@ func (r *Repo) writeToFile(newItem Item) error {
 }
 
 func (r *Repo) PingDB() (bool) {
+	if r.DB.conn == nil {
+		return false
+	}
 
 	var bgCtx = context.Background()		
 	ctx, cancel := context.WithTimeout(bgCtx, 2*time.Second)

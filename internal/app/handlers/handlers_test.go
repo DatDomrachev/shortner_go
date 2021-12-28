@@ -57,7 +57,7 @@ func TestRouter(t *testing.T) {
 		log.Printf("failed to configurate:+%v\n", err)
 	}
 
-	repo := repository.New(config.StoragePath)
+	repo := repository.New(config.StoragePath, "")
 	result1, body1 := testRequest(t, config, repo, "POST", "/", "http://google.com")
 	assert.Equal(t, 201, result1.StatusCode)
 	assert.Equal(t, "application/json", result1.Header.Get("Content-Type"))

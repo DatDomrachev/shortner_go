@@ -19,7 +19,7 @@ func main() {
 	}
 
 	config.InitFlags()
-	repo := repository.New(config.StoragePath,config.DBURL)
+	repo := repository.New(config.StoragePath, config.DBURL)
 	s := server.New(config.Address, config.BaseURL, repo)
 
 	c := make(chan os.Signal, 1)
