@@ -21,6 +21,9 @@ func main() {
 
 	config.InitFlags()
 	db, err := database.New(config.DBURL) 
+	if err != nil {
+		log.Fatalf("failed to configurate:+%v", err)
+	}
 	repo := repository.New(config.StoragePath)
 	s := server.New(config.Address, config.BaseURL, repo, db)
 
