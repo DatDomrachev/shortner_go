@@ -10,7 +10,7 @@ import (
 	"context"
 	"time"
 	"database/sql"
-  _ "github.com/lib/pg"
+  _ "github.com/jackc/pgx/v4"	 
 )
 
 type Repositorier interface {
@@ -70,7 +70,7 @@ func New(storagePath string, databaseURL string) *Repo {
 
 
 	if databaseURL != "" {
-		db, err := sql.Open("postgres", databaseURL)
+		db, err := sql.Open("pgx", databaseURL)
 		if err != nil {
 			log.Print(err.Error())
 			return repo
