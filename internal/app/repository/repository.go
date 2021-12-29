@@ -143,7 +143,6 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 			}
 		}
 	}
-	
 		
 	return myItems
 }
@@ -177,7 +176,7 @@ func (r *Repo) Load(shortURL string) (string, error) {
 		err = db.QueryRow("SELECT full_url from url WHERE id = $1", id).Scan(&fullURL)
 		if err != nil {
 			log.Print(err.Error())
-			return fullURL, err
+			return "", err
 		}
 	}	
 
