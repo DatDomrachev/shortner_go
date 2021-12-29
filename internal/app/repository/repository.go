@@ -169,7 +169,7 @@ func (r *Repo) Load(shortURL string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return fullURL
+		return fullURL, nil
 	}	
 
 	for i := range r.items {
