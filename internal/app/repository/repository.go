@@ -176,9 +176,9 @@ func (r *Repo) Load(shortURL string) (string, error) {
 func (r *Repo) Store(url string, userToken string) (string, error) {
 	
 	if r.DB.conn != nil {
-		var lastInsertId =	0
-		err := r.DB.conn.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&lastInsertId)
-		return strconv.Itoa(lastInsertId), err
+		var lastInsertID =	0
+		err := r.DB.conn.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&lastInsertID)
+		return strconv.Itoa(lastInsertID), err
 	}
 
 
