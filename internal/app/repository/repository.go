@@ -65,6 +65,7 @@ func New(storagePath string, databaseURL string) *Repo {
 		if err != nil {
 			log.Fatalf("failed to Load file:+%v", err)
 		}
+		return repo
 	}
 
 
@@ -101,17 +102,17 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 
 	myItems:= make([]MyItem, 0)
 
-	if r.StoragePath != "" {
-		for i := range r.items {
-			if user == r.items[i].UserToken {
-			  myItem := MyItem{
-			 		ShortURL: strconv.Itoa(i+1),
-			 		OriginalURL: r.items[i].FullURL,
-				}
-				myItems = append(myItems, myItem)
+
+	for i := range r.items {
+		if user == r.items[i].UserToken {
+		  myItem := MyItem{
+		 		ShortURL: strconv.Itoa(i+1),
+		 		OriginalURL: r.items[i].FullURL,
 			}
+			myItems = append(myItems, myItem)
 		}
 	}
+	
 
 	if r.DB.conn != nil {
 		myItems = make([]MyItem, 0)
@@ -149,22 +150,20 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 
 func (r *Repo) Load(shortURL string) (string, error) {
 
+	fullURL := ""
 	param := strings.TrimPrefix(shortURL, `/`)
 
 	id, err := strconv.Atoi(param)
 
-	fullURL :=	""
 
 	if err != nil {
 		return fullURL, err
 	}
 
-	if r.StoragePath != "" {
-		for i := range r.items {
-			if i == id-1 {
-				fullURL = r.items[i].FullURL
-				break
-			}
+	for i := range r.items {
+		if i == id-1 {
+			fullURL = r.items[i].FullURL
+			break
 		}
 	}
 
