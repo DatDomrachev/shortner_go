@@ -21,9 +21,6 @@ type Repositorier interface {
 	PingDB()(bool)
 }
 
-type DataBase struct {
-	conn *sql.DB
-}
 
 type Item struct {
 	FullURL string `json:"url"`
@@ -43,20 +40,16 @@ type Result struct {
 type Repo struct {
 	StoragePath string
 	items       []Item
-	DB					*DataBase 
+	DatabaseURL string  
 }
 
 func New(storagePath string, databaseURL string) *Repo {
 	var items []Item
 
-	dataBase := &DataBase {
-			conn: nil,
-	}
-
 	repo := &Repo{
 		StoragePath: storagePath, 
+		DatabaseURL: databaseURL,	
 		items:       items,
-		DB:					 dataBase,
 	}
 
 	if storagePath != "" {
@@ -73,6 +66,7 @@ func New(storagePath string, databaseURL string) *Repo {
 		db, err := sql.Open("pgx", databaseURL)
 		if err != nil {
 			log.Print(err.Error())
+			defer db.Close();
 			return repo
 		}
 
@@ -81,11 +75,7 @@ func New(storagePath string, databaseURL string) *Repo {
 			return repo
 		}
 
-		dataBase := &DataBase {
-			conn: db,
-		}
-
-		repo.DB = dataBase
+		
 
 		err = goose.Up(db, "migrations" )
 		if err != nil {
@@ -114,10 +104,17 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 	}
 	
 
-	if r.DB.conn != nil {
+	if r.DatabaseURL != "" {
+		db, err := sql.Open("pgx", r.DatabaseURL)
+		if err != nil {
+			log.Print(err.Error())
+			defer db.Close();
+			return myItems
+		}
+
 		myItems = make([]MyItem, 0)
 		ctx := context.Background()
-		rows, err := r.DB.conn.QueryContext(ctx, "Select id::varchar(255), full_url from shortener.url WHERE user_token = $1", user)
+		rows, err := db.QueryContext(ctx, "Select id::varchar(255), full_url from shortener.url WHERE user_token = $1", user)
 
 		if err != nil {
 			log.Print(err.Error())
@@ -167,8 +164,14 @@ func (r *Repo) Load(shortURL string) (string, error) {
 		}
 	}
 
-	if r.DB.conn != nil {
-		err = r.DB.conn.QueryRow("SELECT full_url from shortener.url WHERE id = $1", id).Scan(&fullURL)
+	if r.DatabaseURL != "" {
+		db, err := sql.Open("pgx", r.DatabaseURL)
+		if err != nil {
+			log.Print(err.Error())
+			defer db.Close();
+			return "", err
+		}
+		err = db.QueryRow("SELECT full_url from shortener.url WHERE id = $1", id).Scan(&fullURL)
 		if err != nil {
 			log.Print(err.Error())
 			return fullURL, err
@@ -195,8 +198,15 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 
 	}
 
-	if r.DB.conn != nil {
-		err := r.DB.conn.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
+	if r.DatabaseURL != "" {
+		db, err := sql.Open("pgx", r.DatabaseURL)
+		if err != nil {
+			log.Print(err.Error())
+			defer db.Close();
+			return "", err
+		}
+
+		err = db.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
 		if err != nil {
 			log.Print(err.Error())
 		}
@@ -267,14 +277,22 @@ func (r *Repo) writeToFile(newItem Item) error {
 }
 
 func (r *Repo) PingDB() (bool) {
-	if r.DB.conn == nil {
+	if r.DatabaseURL == "" {
 		return false
 	}
 
+	db, err := sql.Open("pgx", r.DatabaseURL)
+	if err != nil {
+		log.Print(err.Error())
+		defer db.Close();
+		return false
+	}
+		
+	
 	var bgCtx = context.Background()		
 	ctx, cancel := context.WithTimeout(bgCtx, 2*time.Second)
     defer cancel()
-    err:= r.DB.conn.PingContext(ctx)
+    err = db.PingContext(ctx)
     if err != nil {
        log.Print(err.Error())
        return false;
