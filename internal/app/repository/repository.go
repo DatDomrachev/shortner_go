@@ -93,7 +93,7 @@ func New(storagePath string, databaseURL string) *Repo {
 
 func (r *Repo) GetByUser(user string) ([]MyItem) {
 
-	myItems:= make([]MyItem, 0)
+	var muItems []MyItem
 
 
 	if r.DatabaseURL != "" {
@@ -103,7 +103,7 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 			defer db.Close();
 			return myItems
 		}
-		
+
 		ctx := context.Background()
 		rows, err := db.QueryContext(ctx, "Select id::varchar(255), full_url from url WHERE user_token = $1", user)
 
