@@ -1,14 +1,14 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE SCHEMA if not exists shortener;
-CREATE TABLE if not exists shortener.url(
+
+CREATE TABLE if not exists url (
 	id BIGSERIAL primary key,
 	full_url text,
-	user_token text
+	user_token text,
 );
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP SCHEMA shortener CASCADE;
+DROP TABLE if exists url;
 -- +goose StatementEnd

@@ -11,7 +11,7 @@ import (
 	"time"
 	"database/sql"
   _ "github.com/jackc/pgx/v4/stdlib"
-  "github.com/pressly/goose/v3"	 
+//  "github.com/pressly/goose/v3"	 
 )
 
 type Repositorier interface {
@@ -73,11 +73,17 @@ func New(storagePath string, databaseURL string) *Repo {
 		}
 
 		
+	// Не взлетел гусь на автотестах, жаль
+	//	err = goose.Up(db, "migrations" )
+	//	if err != nil {
+	//		log.Fatalf("failed executing migrations: %v\n", err)
+	//	}
 
-		err = goose.Up(db, "migrations" )
+		_, err = db.Exec("CREATE TABLE if not exists url (id BIGSERIAL primary key, full_url text,user_token text)")
+		
 		if err != nil {
-			log.Fatalf("failed executing migrations: %v\n", err)
-		}
+			log.Fatalf("Сreate DB Failed:%+v", err)
+		}								
 	}
 
 
@@ -111,7 +117,7 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 
 		myItems = make([]MyItem, 0)
 		ctx := context.Background()
-		rows, err := db.QueryContext(ctx, "Select id::varchar(255), full_url from shortener.url WHERE user_token = $1", user)
+		rows, err := db.QueryContext(ctx, "Select id::varchar(255), full_url from url WHERE user_token = $1", user)
 
 		if err != nil {
 			log.Print(err.Error())
@@ -168,7 +174,7 @@ func (r *Repo) Load(shortURL string) (string, error) {
 			defer db.Close();
 			return "", err
 		}
-		err = db.QueryRow("SELECT full_url from shortener.url WHERE id = $1", id).Scan(&fullURL)
+		err = db.QueryRow("SELECT full_url from url WHERE id = $1", id).Scan(&fullURL)
 		if err != nil {
 			log.Print(err.Error())
 			return fullURL, err
@@ -203,7 +209,7 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 			return "", err
 		}
 
-		err = db.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
+		err = db.QueryRow("Insert into url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
 		if err != nil {
 			log.Fatalf("Insert DB Failed:%+v", err)
 		}
