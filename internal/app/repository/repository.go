@@ -10,7 +10,8 @@ import (
 	"context"
 	"time"
 	"database/sql"
-  _ "github.com/jackc/pgx/v4/stdlib"	 
+  _ "github.com/jackc/pgx/v4/stdlib"
+  "github.com/pressly/goose"	 
 )
 
 type Repositorier interface {
@@ -87,6 +88,11 @@ func New(storagePath string, databaseURL string) *Repo {
 
 		repo.DB = dataBase
 		
+	
+		err = goose.Up(db, "migrations" )
+		if err != nil {
+			log.Fatalf("failed executing migrations: %v\n", err)
+		}
 	}
 
 
@@ -97,6 +103,38 @@ func New(storagePath string, databaseURL string) *Repo {
 func (r *Repo) GetByUser(user string) ([]MyItem) {
 
 	var myItems []MyItem
+
+	if r.DB.conn != nil {
+		ctx := context.Background()
+		rows, err := r.DB.conn.QueryContext(ctx, "Select id::varchar(255), full_url from shortener.url WHERE user_token = $1", user)
+
+		if err != nil {
+			log.Print(err.Error())
+			return myItems
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+			var item MyItem
+			err = rows.Scan(&item.ShortURL, &item.OriginalURL)
+
+			if err != nil {
+				log.Print(err.Error())
+				return myItems
+			}
+
+			myItems = append(myItems, item)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			log.Print(err.Error())
+		}
+
+		return myItems
+
+	}
 
 	for i := range r.items {
 		if user == r.items[i].UserToken {
@@ -121,6 +159,12 @@ func (r *Repo) Load(shortURL string) (string, error) {
 		return "", err
 	}
 
+	if r.DB.conn != nil {
+		fullURL :=	""
+		err = r.DB.conn.QueryRow("SELECT full_url from shortener.url WHERE id = $1", id).Scan(&fullURL)
+		return fullURL, err
+	}	
+
 	for i := range r.items {
 		if i == id-1 {
 			return r.items[i].FullURL, nil
@@ -130,6 +174,14 @@ func (r *Repo) Load(shortURL string) (string, error) {
 }
 
 func (r *Repo) Store(url string, userToken string) (string, error) {
+	
+	if r.DB.conn != nil {
+		var lastInsertId =	0
+		err := r.DB.conn.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&lastInsertId)
+		return strconv.Itoa(lastInsertId), err
+	}
+
+
 	newItem := Item{FullURL: url, UserToken: userToken}
 	r.items = append(r.items, newItem)
 	result := len(r.items)
@@ -143,6 +195,7 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 		}
 
 	}
+
 
 	return strconv.Itoa(result), nil
 }
