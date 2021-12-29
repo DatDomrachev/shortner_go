@@ -96,53 +96,54 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 	myItems:= make([]MyItem, 0)
 
 
-	// if r.DatabaseURL != "" {
-	// 	db, err := sql.Open("pgx", r.DatabaseURL)
-	// 	if err != nil {
-	// 		log.Print(err.Error())
-	// 		defer db.Close();
-	// 		return myItems
-	// 	}
-
-	// 	myItems = make([]MyItem, 0)
-	// 	ctx := context.Background()
-	// 	rows, err := db.QueryContext(ctx, "Select id::varchar(255), full_url from url WHERE user_token = $1", user)
-
-	// 	if err != nil {
-	// 		log.Print(err.Error())
-	// 		return myItems
-	// 	}
-
-	// 	defer rows.Close()
-
-	// 	for rows.Next() {
-	// 		var item MyItem
-	// 		err = rows.Scan(&item.ShortURL, &item.OriginalURL)
-
-	// 		if err != nil {
-	// 			log.Print(err.Error())
-	// 			return myItems
-	// 		}
-
-	// 		myItems = append(myItems, item)
-	// 	}
-
-	// 	err = rows.Err()
-	// 	if err != nil {
-	// 		log.Print(err.Error())
-	// 	}
-
-	// } else {
-		for i := range r.items {
-			if user == r.items[i].UserToken {
-			  myItem := MyItem{
-			 		ShortURL: strconv.Itoa(i+1),
-			 		OriginalURL: r.items[i].FullURL,
-				}
-				myItems = append(myItems, myItem)
-			}
+	if r.DatabaseURL != "" {
+		db, err := sql.Open("pgx", r.DatabaseURL)
+		if err != nil {
+			log.Print(err.Error())
+			defer db.Close();
+			return myItems
 		}
-//	}
+		
+		ctx := context.Background()
+		rows, err := db.QueryContext(ctx, "Select id::varchar(255), full_url from url WHERE user_token = $1", user)
+
+		if err != nil {
+			log.Print(err.Error())
+			return myItems
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+			var item MyItem
+			err = rows.Scan(&item.ShortURL, &item.OriginalURL)
+
+			if err != nil {
+				log.Print(err.Error())
+				return myItems
+			}
+
+			myItems = append(myItems, item)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			log.Print(err.Error())
+		}
+
+		return myItems
+
+	} 
+
+	for i := range r.items {
+		if user == r.items[i].UserToken {
+		  myItem := MyItem{
+		 		ShortURL: strconv.Itoa(i+1),
+		 		OriginalURL: r.items[i].FullURL,
+			}
+			myItems = append(myItems, myItem)
+		}
+	}
 		
 	return myItems
 }

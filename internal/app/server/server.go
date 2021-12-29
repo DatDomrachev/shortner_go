@@ -172,7 +172,6 @@ func newCookie(key []byte) (cookie *http.Cookie, err error) {
     cookie = &http.Cookie {
 	        	Name:   "user_token",
 	        	Value:  hex.EncodeToString(src) + hex.EncodeToString(h.Sum(nil)),
-	        	MaxAge: 300,
 	        }	
 
     return cookie, nil;
