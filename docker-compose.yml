@@ -1,0 +1,16 @@
+version: '3.1'
+
+services:
+
+  db:
+    image: postgres:latest
+    ports:
+      - 5435:5432
+    container_name: postgres_for_shortener
+    restart: always
+    environment: 
+      POSTGRES_DB: 'shortener'
+      POSTGRES_USER: 'user'
+      POSTGRES_PASSWORD: 'password'
+  
+  

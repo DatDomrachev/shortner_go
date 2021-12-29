@@ -1,10 +1,10 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE SCHEMA if not exists shortener;
-CREATE TABLE if not exists shortener.url (
+CREATE TABLE if not exists shortener.url(
 	id BIGSERIAL primary key,
 	full_url text,
-	user_token text,
+	user_token text
 );
 -- +goose StatementEnd
 

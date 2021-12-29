@@ -12,7 +12,6 @@ import (
 	"database/sql"
   _ "github.com/jackc/pgx/v4/stdlib"
   "github.com/pressly/goose/v3"	 
-  "embed"
 )
 
 type Repositorier interface {
@@ -86,10 +85,6 @@ func New(storagePath string, databaseURL string) *Repo {
 		}
 
 		repo.DB = dataBase
-		
-		var embedMigrations embed.FS
-
-		goose.SetBaseFS(embedMigrations)
 
 		err = goose.Up(db, "migrations" )
 		if err != nil {
