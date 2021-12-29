@@ -93,7 +93,7 @@ func New(storagePath string, databaseURL string) *Repo {
 
 func (r *Repo) GetByUser(user string) ([]MyItem) {
 
-	var muItems []MyItem
+	var myItems []MyItem
 
 
 	if r.DatabaseURL != "" {
