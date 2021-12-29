@@ -12,6 +12,7 @@ import (
 	"database/sql"
   _ "github.com/jackc/pgx/v4/stdlib"
   "github.com/pressly/goose/v3"	 
+  "embed"
 )
 
 type Repositorier interface {
@@ -88,7 +89,10 @@ func New(storagePath string, databaseURL string) *Repo {
 
 		repo.DB = dataBase
 		
-	
+		var embedMigrations embed.FS
+
+		goose.SetBaseFS(embedMigrations)
+
 		err = goose.Up(db, "migrations" )
 		if err != nil {
 			log.Fatalf("failed executing migrations: %v\n", err)
@@ -162,7 +166,10 @@ func (r *Repo) Load(shortURL string) (string, error) {
 	if r.DB.conn != nil {
 		fullURL :=	""
 		err = r.DB.conn.QueryRow("SELECT full_url from shortener.url WHERE id = $1", id).Scan(&fullURL)
-		return fullURL, err
+		if err != nil {
+			return "", err
+		}
+		return fullURL
 	}	
 
 	for i := range r.items {
@@ -178,7 +185,10 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 	if r.DB.conn != nil {
 		var lastInsertID =	0
 		err := r.DB.conn.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&lastInsertID)
-		return strconv.Itoa(lastInsertID), err
+		if err != nil {
+			return "", err
+		}
+		return strconv.Itoa(lastInsertID), nil
 	}
 
 
