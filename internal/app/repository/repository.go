@@ -96,43 +96,43 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 	myItems:= make([]MyItem, 0)
 
 
-	if r.DatabaseURL != "" {
-		db, err := sql.Open("pgx", r.DatabaseURL)
-		if err != nil {
-			log.Print(err.Error())
-			defer db.Close();
-			return myItems
-		}
+	// if r.DatabaseURL != "" {
+	// 	db, err := sql.Open("pgx", r.DatabaseURL)
+	// 	if err != nil {
+	// 		log.Print(err.Error())
+	// 		defer db.Close();
+	// 		return myItems
+	// 	}
 
-		myItems = make([]MyItem, 0)
-		ctx := context.Background()
-		rows, err := db.QueryContext(ctx, "Select id::varchar(255), full_url from url WHERE user_token = $1", user)
+	// 	myItems = make([]MyItem, 0)
+	// 	ctx := context.Background()
+	// 	rows, err := db.QueryContext(ctx, "Select id::varchar(255), full_url from url WHERE user_token = $1", user)
 
-		if err != nil {
-			log.Print(err.Error())
-			return myItems
-		}
+	// 	if err != nil {
+	// 		log.Print(err.Error())
+	// 		return myItems
+	// 	}
 
-		defer rows.Close()
+	// 	defer rows.Close()
 
-		for rows.Next() {
-			var item MyItem
-			err = rows.Scan(&item.ShortURL, &item.OriginalURL)
+	// 	for rows.Next() {
+	// 		var item MyItem
+	// 		err = rows.Scan(&item.ShortURL, &item.OriginalURL)
 
-			if err != nil {
-				log.Print(err.Error())
-				return myItems
-			}
+	// 		if err != nil {
+	// 			log.Print(err.Error())
+	// 			return myItems
+	// 		}
 
-			myItems = append(myItems, item)
-		}
+	// 		myItems = append(myItems, item)
+	// 	}
 
-		err = rows.Err()
-		if err != nil {
-			log.Print(err.Error())
-		}
+	// 	err = rows.Err()
+	// 	if err != nil {
+	// 		log.Print(err.Error())
+	// 	}
 
-	} else {
+	// } else {
 		for i := range r.items {
 			if user == r.items[i].UserToken {
 			  myItem := MyItem{
@@ -142,7 +142,7 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 				myItems = append(myItems, myItem)
 			}
 		}
-	}
+//	}
 		
 	return myItems
 }
