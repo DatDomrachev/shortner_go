@@ -8,5 +8,6 @@ require (
 	github.com/jackc/pgx/v4 v4.14.1
 	github.com/lib/pq v1.10.4 // indirect
 	github.com/pressly/goose v2.7.0+incompatible
+	github.com/pressly/goose/v3 v3.5.0
 	github.com/stretchr/testify v1.7.0
 )
