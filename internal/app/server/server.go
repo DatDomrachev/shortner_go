@@ -17,8 +17,7 @@ import (
 	"encoding/hex"
 	"crypto/hmac"
     "crypto/sha256"
-    "math/rand"
-    "encoding/binary"
+    "crypto/rand"
 )
 
 type Server interface {
@@ -159,11 +158,13 @@ func GzipHandle(next http.Handler) http.Handler {
 
 func newCookie(key []byte) (cookie *http.Cookie, err error) {
 	
-	//рандомный id
-	src := make([]byte, 4)
-	id:=rand.Uint32()
-    binary.BigEndian.PutUint32(src, id)
-	 
+	//рандомные байты
+    src := make([]byte, 16)
+    _, err = rand.Read(src)
+    if err != nil {
+        return nil, err
+    }
+
     
     //подпись	
     h := hmac.New(sha256.New, key)
@@ -197,10 +198,10 @@ func CookieManager(next http.Handler) http.Handler {
 		   
 		   
 		    h := hmac.New(sha256.New, secretkey)
-		    h.Write(data[:4])
+		    h.Write(data[:16])
 		    sign := h.Sum(nil) 
 
-		    if !hmac.Equal(sign, data[4:]) {
+		    if !hmac.Equal(sign, data[16:]) {
 		       
 		    	cookie, err = newCookie(secretkey)
 		    	if err != nil {
