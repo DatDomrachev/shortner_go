@@ -72,7 +72,7 @@ func (s *srv) Run(ctx context.Context) (err error) {
 
 	log.Print("Server Started")
 
-	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctxShutDown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer func() {
 		// extra handling here
 		cancel()
