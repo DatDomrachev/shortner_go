@@ -134,15 +134,17 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 
 	} else {
 		for i := range r.items {
-		if user == r.items[i].UserToken {
-		  myItem := MyItem{
-		 		ShortURL: strconv.Itoa(i+1),
-		 		OriginalURL: r.items[i].FullURL,
+			if user == r.items[i].UserToken {
+			  myItem := MyItem{
+			 		ShortURL: strconv.Itoa(i+1),
+			 		OriginalURL: r.items[i].FullURL,
+				}
+				myItems = append(myItems, myItem)
 			}
-			myItems = append(myItems, myItem)
 		}
 	}
-
+	
+		
 	return myItems
 }
 
