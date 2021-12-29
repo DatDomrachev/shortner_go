@@ -99,7 +99,7 @@ func New(storagePath string, databaseURL string) *Repo {
 
 func (r *Repo) GetByUser(user string) ([]MyItem) {
 
-	var myItems []MyItem
+	myItems:= make([]MyItem, 0)
 
 	if r.StoragePath != "" {
 		for i := range r.items {
@@ -156,7 +156,7 @@ func (r *Repo) Load(shortURL string) (string, error) {
 	fullURL :=	""
 
 	if err != nil {
-		return "", err
+		return fullURL, err
 	}
 
 	if r.StoragePath != "" {
@@ -171,7 +171,8 @@ func (r *Repo) Load(shortURL string) (string, error) {
 	if r.DB.conn != nil {
 		err = r.DB.conn.QueryRow("SELECT full_url from shortener.url WHERE id = $1", id).Scan(&fullURL)
 		if err != nil {
-			return "", err
+			log.Print(err.Error())
+			return fullURL, err
 		}
 	}	
 
@@ -198,7 +199,7 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 	if r.DB.conn != nil {
 		err := r.DB.conn.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
 		if err != nil {
-			return "", err
+			log.Print(err.Error())
 		}
 	}
 
