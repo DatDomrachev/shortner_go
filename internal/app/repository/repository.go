@@ -96,17 +96,6 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 	myItems:= make([]MyItem, 0)
 
 
-	for i := range r.items {
-		if user == r.items[i].UserToken {
-		  myItem := MyItem{
-		 		ShortURL: strconv.Itoa(i+1),
-		 		OriginalURL: r.items[i].FullURL,
-			}
-			myItems = append(myItems, myItem)
-		}
-	}
-	
-
 	if r.DatabaseURL != "" {
 		db, err := sql.Open("pgx", r.DatabaseURL)
 		if err != nil {
@@ -143,6 +132,15 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 			log.Print(err.Error())
 		}
 
+	} else {
+		for i := range r.items {
+		if user == r.items[i].UserToken {
+		  myItem := MyItem{
+		 		ShortURL: strconv.Itoa(i+1),
+		 		OriginalURL: r.items[i].FullURL,
+			}
+			myItems = append(myItems, myItem)
+		}
 	}
 
 	return myItems
