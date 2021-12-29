@@ -66,8 +66,6 @@ func New(storagePath string, databaseURL string) *Repo {
 		if err != nil {
 			log.Fatalf("failed to Load file:+%v", err)
 		}
-
-		return repo
 	}
 
 
@@ -108,7 +106,20 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 
 	var myItems []MyItem
 
+	if r.StoragePath != "" {
+		for i := range r.items {
+			if user == r.items[i].UserToken {
+			  myItem := MyItem{
+			 		ShortURL: strconv.Itoa(i+1),
+			 		OriginalURL: r.items[i].FullURL,
+				}
+				myItems = append(myItems, myItem)
+			}
+		}
+	}
+
 	if r.DB.conn != nil {
+		myItems = make([]MyItem, 0)
 		ctx := context.Background()
 		rows, err := r.DB.conn.QueryContext(ctx, "Select id::varchar(255), full_url from shortener.url WHERE user_token = $1", user)
 
@@ -136,18 +147,6 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 			log.Print(err.Error())
 		}
 
-		return myItems
-
-	}
-
-	for i := range r.items {
-		if user == r.items[i].UserToken {
-		  myItem := MyItem{
-		 		ShortURL: strconv.Itoa(i+1),
-		 		OriginalURL: r.items[i].FullURL,
-			}
-			myItems = append(myItems, myItem)
-		}
 	}
 
 	return myItems
@@ -159,38 +158,33 @@ func (r *Repo) Load(shortURL string) (string, error) {
 
 	id, err := strconv.Atoi(param)
 
+	fullURL :=	""
+
 	if err != nil {
 		return "", err
 	}
 
+	if r.StoragePath != "" {
+		for i := range r.items {
+			if i == id-1 {
+				fullURL = r.items[i].FullURL
+				break
+			}
+		}
+	}
+
 	if r.DB.conn != nil {
-		fullURL :=	""
 		err = r.DB.conn.QueryRow("SELECT full_url from shortener.url WHERE id = $1", id).Scan(&fullURL)
 		if err != nil {
 			return "", err
 		}
-		return fullURL, nil
 	}	
 
-	for i := range r.items {
-		if i == id-1 {
-			return r.items[i].FullURL, nil
-		}
-	}
-	return "", err
+	return fullURL, nil
 }
 
 func (r *Repo) Store(url string, userToken string) (string, error) {
 	
-	if r.DB.conn != nil {
-		var lastInsertID =	0
-		err := r.DB.conn.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&lastInsertID)
-		if err != nil {
-			return "", err
-		}
-		return strconv.Itoa(lastInsertID), nil
-	}
-
 
 	newItem := Item{FullURL: url, UserToken: userToken}
 	r.items = append(r.items, newItem)
@@ -204,6 +198,13 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 			return "", err
 		}
 
+	}
+
+	if r.DB.conn != nil {
+		err := r.DB.conn.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
+		if err != nil {
+			return "", err
+		}
 	}
 
 
