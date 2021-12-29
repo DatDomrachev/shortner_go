@@ -58,21 +58,18 @@ func New(storagePath string, databaseURL string) *Repo {
 		if err != nil {
 			log.Fatalf("failed to Load file:+%v", err)
 		}
-		return repo
 	}
 
 
 	if databaseURL != "" {
 		db, err := sql.Open("pgx", databaseURL)
 		if err != nil {
-			log.Print(err.Error())
 			defer db.Close();
-			return repo
+			log.Fatalf("Open DB Failed:%+v", err)
 		}
 
 		if err := db.Ping(); err != nil {
-			log.Print(err.Error())
-			return repo
+			log.Fatalf("Open DB Failed:%+v", err)
 		}
 
 		
@@ -167,7 +164,7 @@ func (r *Repo) Load(shortURL string) (string, error) {
 	if r.DatabaseURL != "" {
 		db, err := sql.Open("pgx", r.DatabaseURL)
 		if err != nil {
-			log.Print(err.Error())
+			log.Fatalf("Open DB Failed:%+v", err)
 			defer db.Close();
 			return "", err
 		}
@@ -201,14 +198,14 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 	if r.DatabaseURL != "" {
 		db, err := sql.Open("pgx", r.DatabaseURL)
 		if err != nil {
-			log.Print(err.Error())
+			log.Fatalf("Open DB Failed:%+v", err)
 			defer db.Close();
 			return "", err
 		}
 
 		err = db.QueryRow("Insert into shortener.url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
 		if err != nil {
-			log.Print(err.Error())
+			log.Fatalf("Insert DB Failed:%+v", err)
 		}
 	}
 
