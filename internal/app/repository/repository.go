@@ -11,7 +11,7 @@ import (
 	"time"
 	"database/sql"
   _ "github.com/jackc/pgx/v4/stdlib"
-  "github.com/pressly/goose/v3"	 
+//  "github.com/pressly/goose/v3"	 
 )
 
 type Repositorier interface {
@@ -73,17 +73,17 @@ func New(storagePath string, databaseURL string) *Repo {
 		}
 
 		
-	//Не взлетел гусь на автотестах, жаль
-		err = goose.Up(db, "migrations" )
-		if err != nil {
-			log.Fatalf("failed executing migrations: %v\n", err)
-		}
+	// Не взлетел гусь на автотестах, жаль
+	//	err = goose.Up(db, "migrations" )
+	//	if err != nil {
+	//		log.Fatalf("failed executing migrations: %v\n", err)
+	//	}
 
-		// _, err = db.Exec("CREATE TABLE if not exists url (id BIGSERIAL primary key, full_url text,user_token text)")
+		_, err = db.Exec("CREATE TABLE if not exists url (id BIGSERIAL primary key, full_url text,user_token text)")
 		
-		// if err != nil {
-		// 	log.Fatalf("Сreate DB Failed:%+v", err)
-		// }								
+		if err != nil {
+			log.Fatalf("Сreate DB Failed:%+v", err)
+		}								
 	}
 
 
@@ -144,7 +144,7 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 		}
 	}
 	
-
+		
 	return myItems
 }
 
