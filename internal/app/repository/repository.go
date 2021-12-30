@@ -18,6 +18,7 @@ type Repositorier interface {
 	Load(shortURL string) (string, error)
 	Store(url string, userToken string) (string, error)
 	GetByUser(userToken string) ([]MyItem)
+	BatchAll(items []CorrelationItem, userToken string) ([]CorrelationShort, error)
 	PingDB()(bool)
 }
 
@@ -37,18 +38,36 @@ type Result struct {
 	ShortURL string `json:"result"`
 }
 
+type DataBase struct {
+	conn *sql.DB
+}
+
 type Repo struct {
 	StoragePath string
 	items       []Item
-	DatabaseURL string  
+	DB   				*DataBase
+}
+
+
+type CorrelationItem struct {
+	CorrelationId string `json:"correlation_id"`
+	OriginalURL string `json:"original_url"`
+}
+
+type CorrelationShort struct {
+	CorrelationId string `json:"correlation_id"`
+	ShortURL string `json:"short_url"`
 }
 
 func New(storagePath string, databaseURL string) *Repo {
 	var items []Item
+	dataBase := &DataBase {
+			conn: nil,
+	}
 
 	repo := &Repo{
 		StoragePath: storagePath, 
-		DatabaseURL: databaseURL,	
+		DB: 				 dataBase,	
 		items:       items,
 	}
 
@@ -64,11 +83,12 @@ func New(storagePath string, databaseURL string) *Repo {
 	if databaseURL != "" {
 		db, err := sql.Open("pgx", databaseURL)
 		if err != nil {
-			defer db.Close();
+			db.Close();
 			log.Fatalf("Open DB Failed:%+v", err)
 		}
 
 		if err := db.Ping(); err != nil {
+			db.Close();
 			log.Fatalf("Open DB Failed:%+v", err)
 		}
 
@@ -83,7 +103,20 @@ func New(storagePath string, databaseURL string) *Repo {
 		
 		if err != nil {
 			log.Fatalf("Сreate DB Failed:%+v", err)
-		}								
+		}			
+
+		_, err = db.Exec("ALTER TABLE url ADD COLUMN IF NOT EXISTS correlation_id text");
+
+		if err != nil {
+			log.Fatalf("Сreate DB Failed:%+v", err)
+		}	
+
+
+		dataBase := &DataBase {
+			conn: db,
+		}
+
+		repo.DB = dataBase					
 	}
 
 
@@ -96,23 +129,15 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 	var myItems []MyItem
 
 
-	if r.DatabaseURL != "" {
-		db, err := sql.Open("pgx", r.DatabaseURL)
-		if err != nil {
-			log.Print(err.Error())
-			defer db.Close();
-			return myItems
-		}
-
+	if r.DB.conn != nil {
+		
 		ctx := context.Background()
-		rows, err := db.QueryContext(ctx, "Select id::varchar(255), full_url from url WHERE user_token = $1", user)
+		rows, err := r.DB.conn.QueryContext(ctx, "Select id::varchar(255), full_url from url WHERE user_token = $1", user)
 
 		if err != nil {
 			log.Print(err.Error())
 			return myItems
 		}
-
-		defer rows.Close()
 
 		for rows.Next() {
 			var item MyItem
@@ -167,14 +192,8 @@ func (r *Repo) Load(shortURL string) (string, error) {
 		}
 	}
 
-	if r.DatabaseURL != "" {
-		db, err := sql.Open("pgx", r.DatabaseURL)
-		if err != nil {
-			log.Fatalf("Open DB Failed:%+v", err)
-			defer db.Close();
-			return "", err
-		}
-		err = db.QueryRow("SELECT full_url from url WHERE id = $1", id).Scan(&fullURL)
+	if r.DB.conn != nil {
+		err = r.DB.conn.QueryRow("SELECT full_url from url WHERE id = $1", id).Scan(&fullURL)
 		if err != nil {
 			log.Print(err.Error())
 			return "", err
@@ -201,15 +220,8 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 
 	}
 
-	if r.DatabaseURL != "" {
-		db, err := sql.Open("pgx", r.DatabaseURL)
-		if err != nil {
-			log.Fatalf("Open DB Failed:%+v", err)
-			defer db.Close();
-			return "", err
-		}
-
-		err = db.QueryRow("Insert into url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
+	if r.DB.conn != nil {
+		err := r.DB.conn.QueryRow("Insert into url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
 		if err != nil {
 			log.Fatalf("Insert DB Failed:%+v", err)
 		}
@@ -280,26 +292,42 @@ func (r *Repo) writeToFile(newItem Item) error {
 }
 
 func (r *Repo) PingDB() (bool) {
-	if r.DatabaseURL == "" {
+	if r.DB.conn == nil {
 		return false
 	}
 
-	db, err := sql.Open("pgx", r.DatabaseURL)
-	if err != nil {
-		log.Print(err.Error())
-		defer db.Close();
-		return false
-	}
-		
-	
 	var bgCtx = context.Background()		
 	ctx, cancel := context.WithTimeout(bgCtx, 2*time.Second)
     defer cancel()
-    err = db.PingContext(ctx)
+    err:= r.DB.conn.PingContext(ctx)
     if err != nil {
        log.Print(err.Error())
        return false;
     }
 
     return true;
+}
+
+func (r *Repo) BatchAll(items []CorrelationItem, userToken string) ([]CorrelationShort, error) {
+
+	var shortens []CorrelationShort
+
+  id := 0
+
+  for _, i := range items {
+    err := r.DB.conn.QueryRow("Insert into url (full_url, user_token, correlation_id) VALUES($1,$2,$3) RETURNING id", i.OriginalURL, userToken, i.CorrelationId).Scan(&id) 
+    if err != nil {
+       return nil, err;
+    }
+      shorten:= CorrelationShort {
+      	CorrelationId: i.CorrelationId,
+      	ShortURL:  strconv.Itoa(id),
+      }
+
+      shortens = append(shortens, shorten)
+
+  }
+ 
+
+  return shortens, nil
 }

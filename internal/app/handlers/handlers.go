@@ -123,3 +123,39 @@ func PingDB(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Re
 	}		
 }
 
+func BatchHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var items []repository.CorrelationItem 
+		
+
+		body, err := ioutil.ReadAll(r.Body)
+
+		err = json.Unmarshal(body, &items)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		shortens, err := repo.BatchAll(items, userToken)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		for i := range shortens {
+			shortens[i].ShortURL = baseURL + "/" + shortens[i].ShortURL
+		}
+
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		buf := bytes.NewBuffer([]byte{})
+		if err := json.NewEncoder(buf).Encode(shortens); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(buf.Bytes())
+	
+	}		
+}

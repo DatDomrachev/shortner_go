@@ -97,15 +97,19 @@ func (s *srv) ConfigureRouter() *chi.Mux {
     	u := r.Context().Value(contextKey("user_token")).(string)
     	handlers.SimpleWriteHandler(s.repo, s.baseURL, u)(rw,r)
     })
-	router.Post("/api/shorten", func(rw http.ResponseWriter, r *http.Request) {
+	router.Get("/user/urls", func(rw http.ResponseWriter, r *http.Request) {
+    	u := r.Context().Value(contextKey("user_token")).(string)
+    	handlers.AllMyURLSHandler(s.repo, s.baseURL, u)(rw,r)
+    })
+    router.Get("/ping", handlers.PingDB(s.repo))
+    router.Post("/api/shorten/batch", func(rw http.ResponseWriter, r *http.Request) {
+    	u := r.Context().Value(contextKey("user_token")).(string) 
+    	handlers.BatchHandler(s.repo, s.baseURL, u)(rw,r)
+    })
+    router.Post("/api/shorten", func(rw http.ResponseWriter, r *http.Request) {
     	u := r.Context().Value(contextKey("user_token")).(string)
     	handlers.SimpleJSONHandler(s.repo, s.baseURL, u)(rw,r)
     })
-	router.Get("/user/urls", func(rw http.ResponseWriter, r *http.Request) {
-    	u := r.Context().Value(contextKey("user_token")).(string)
-    	handlers.AllMyURLSHandler(s.repo, s.baseURL,u)(rw,r)
-    })
-    router.Get("/ping", handlers.PingDB(s.repo))
 	return router
 }
 
