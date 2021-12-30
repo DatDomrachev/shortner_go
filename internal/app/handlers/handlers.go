@@ -39,6 +39,7 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string, userToken 
 			return
 		}
 
+		w.Header().Set("content-type", "application/json")
 
 		if strings.Contains(result, "conflict:"){
 			w.WriteHeader(http.StatusConflict)
@@ -50,8 +51,6 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string, userToken 
 		
 
 		resp := baseURL + "/" + result
-
-		w.Header().Set("content-type", "application/json")
 		
 
 		w.Write([]byte(resp))
@@ -76,6 +75,8 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string, userToken s
 			return
 		}
 
+
+		w.Header().Set("content-type", "application/json")
 		if strings.Contains(result, "conflict:"){
 			w.WriteHeader(http.StatusConflict)
 			result = strings.ReplaceAll(result, "conflict:", "")
@@ -86,7 +87,7 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string, userToken s
 
 		newResult := repository.Result{ShortURL: baseURL + "/" + result}
 
-		w.Header().Set("content-type", "application/json")
+		
 		
 
 		buf := bytes.NewBuffer([]byte{})
