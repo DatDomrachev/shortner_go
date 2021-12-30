@@ -11,6 +11,8 @@ import (
 	"time"
 	"database/sql"
   _ "github.com/jackc/pgx/v4/stdlib"
+  "github.com/jackc/pgconn"
+  "github.com/jackc/pgerrcode"
 //  "github.com/pressly/goose/v3"	 
 )
 
@@ -107,10 +109,17 @@ func New(storagePath string, databaseURL string) *Repo {
 
 		_, err = db.Exec("ALTER TABLE url ADD COLUMN IF NOT EXISTS correlation_id text");
 
+
 		if err != nil {
 			log.Fatalf("Сreate DB Failed:%+v", err)
-		}	
+		}
 
+		
+		_, err = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_urls_constrain ON url (full_url)");	
+
+		if err != nil {
+			log.Fatalf("Сreate DB Failed:%+v", err)
+		}
 
 		dataBase := &DataBase {
 			conn: db,
@@ -222,9 +231,18 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 
 	if r.DB.conn != nil {
 		err := r.DB.conn.QueryRow("Insert into url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
+		
 		if err != nil {
-			log.Fatalf("Insert DB Failed:%+v", err)
-		}
+			err, ok := err.(*pgconn.PgError)
+
+		 	if ok && err.Code == pgerrcode.UniqueViolation {
+		 		r.DB.conn.QueryRow("SELECT id from url WHERE full_url = $1", url).Scan(&result)
+		    return "conflict:"+strconv.Itoa(result), nil
+			} else {
+				return "", err
+			}
+		}	
+
 	}
 
 
@@ -315,16 +333,17 @@ func (r *Repo) BatchAll(items []CorrelationItem, userToken string) ([]Correlatio
   id := 0
 
   for _, i := range items {
-    err := r.DB.conn.QueryRow("Insert into url (full_url, user_token, correlation_id) VALUES($1,$2,$3) RETURNING id", i.OriginalURL, userToken, i.CorrectionalID).Scan(&id) 
+    err := r.DB.conn.QueryRow("Insert into url (full_url, user_token, correlation_id) VALUES($1,$2,$3) ON CONFLICT(full_url) DO UPDATE SET full_url=EXCLUDED.full_url RETURNING id", i.OriginalURL, userToken, i.CorrectionalID).Scan(&id) 
     if err != nil {
-       return nil, err;
+			return nil, err;
+		}	
+       
+    shorten:= CorrelationShort {
+    	CorrectionalID: i.CorrectionalID,
+    	ShortURL:  strconv.Itoa(id),
     }
-      shorten:= CorrelationShort {
-      	CorrectionalID: i.CorrectionalID,
-      	ShortURL:  strconv.Itoa(id),
-      }
 
-      shortens = append(shortens, shorten)
+    shortens = append(shortens, shorten)
 
   }
  
