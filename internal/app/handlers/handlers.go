@@ -150,8 +150,8 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 		}
 
 		w.Header().Set("content-type", "application/json")
-		w.WriteHeader(http.StatusOK)
-
+		w.WriteHeader(http.StatusCreated)
+		
 		buf := bytes.NewBuffer([]byte{})
 		if err := json.NewEncoder(buf).Encode(shortens); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
