@@ -50,12 +50,12 @@ type Repo struct {
 
 
 type CorrelationItem struct {
-	CorrelationId string `json:"correlation_id"`
+	CorrectionalID string `json:"correlation_id"`
 	OriginalURL string `json:"original_url"`
 }
 
 type CorrelationShort struct {
-	CorrelationId string `json:"correlation_id"`
+	CorrectionalID string `json:"correlation_id"`
 	ShortURL string `json:"short_url"`
 }
 
@@ -315,12 +315,12 @@ func (r *Repo) BatchAll(items []CorrelationItem, userToken string) ([]Correlatio
   id := 0
 
   for _, i := range items {
-    err := r.DB.conn.QueryRow("Insert into url (full_url, user_token, correlation_id) VALUES($1,$2,$3) RETURNING id", i.OriginalURL, userToken, i.CorrelationId).Scan(&id) 
+    err := r.DB.conn.QueryRow("Insert into url (full_url, user_token, correlation_id) VALUES($1,$2,$3) RETURNING id", i.OriginalURL, userToken, i.CorrectionalID).Scan(&id) 
     if err != nil {
        return nil, err;
     }
       shorten:= CorrelationShort {
-      	CorrelationId: i.CorrelationId,
+      	CorrectionalID: i.CorrectionalID,
       	ShortURL:  strconv.Itoa(id),
       }
 
