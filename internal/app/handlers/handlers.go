@@ -127,8 +127,11 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 	return func(w http.ResponseWriter, r *http.Request) {
 		var items []repository.CorrelationItem 
 		
-
 		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		err = json.Unmarshal(body, &items)
 		if err != nil {
