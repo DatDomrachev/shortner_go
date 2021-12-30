@@ -241,8 +241,7 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 			} else {
 				return "", err
 			}
-		}	
-
+		}
 	}
 
 
