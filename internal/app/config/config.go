@@ -10,7 +10,7 @@ type Config struct {
 	Address     string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
 	BaseURL     string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	StoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
-	DBURL 		string `env:"DATABASE_DSN" envDefault:""`
+	DBURL       string `env:"DATABASE_DSN" envDefault:""`
 }
 
 func New() (*Config, error) {

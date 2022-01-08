@@ -9,17 +9,15 @@ import (
 	"strings"
 )
 
-
 func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fullURL, err := repo.Load(r.URL.Path)
+		fullURL, err := repo.Load(r.URL.Path, r.Context())
 
 		if err != nil {
 			http.Error(w, "Not found", http.StatusBadRequest)
 			return
 		}
 
-		
 		http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
 	}
 }
@@ -32,8 +30,7 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string, userToken 
 			return
 		}
 
-		
-		result, err := repo.Store(string(data), userToken)
+		result, err := repo.Store(string(data), userToken, r.Context())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -41,17 +38,15 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string, userToken 
 
 		w.Header().Set("content-type", "application/json")
 
-		if strings.Contains(result, "conflict:"){
+		if strings.Contains(result, "conflict:") {
 			w.WriteHeader(http.StatusConflict)
 			result = strings.ReplaceAll(result, "conflict:", "")
 
 		} else {
 			w.WriteHeader(http.StatusCreated)
 		}
-		
 
 		resp := baseURL + "/" + result
-		
 
 		w.Write([]byte(resp))
 	}
@@ -67,17 +62,15 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string, userToken s
 			return
 		}
 
-		
-		result, err := repo.Store(url.FullURL, userToken)
+		result, err := repo.Store(url.FullURL, userToken, r.Context())
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-
 		w.Header().Set("content-type", "application/json")
-		if strings.Contains(result, "conflict:"){
+		if strings.Contains(result, "conflict:") {
 			w.WriteHeader(http.StatusConflict)
 			result = strings.ReplaceAll(result, "conflict:", "")
 
@@ -86,9 +79,6 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string, userToken s
 		}
 
 		newResult := repository.Result{ShortURL: baseURL + "/" + result}
-
-		
-		
 
 		buf := bytes.NewBuffer([]byte{})
 		if err := json.NewEncoder(buf).Encode(newResult); err != nil {
@@ -103,13 +93,17 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string, userToken s
 func AllMyURLSHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		items := repo.GetByUser(userToken)
+		items, err := repo.GetByUser(userToken, r.Context())
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		if len(items) == 0 {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-
 
 		for i := range items {
 			items[i].ShortURL = baseURL + "/" + items[i].ShortURL
@@ -125,15 +119,14 @@ func AllMyURLSHandler(repo repository.Repositorier, baseURL string, userToken st
 		}
 
 		w.Write(buf.Bytes())
-	
-	}		
-}
 
+	}
+}
 
 func PingDB(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		result := repo.PingDB()
+		result := repo.PingDB(r.Context())
 
 		if !result {
 			http.Error(w, "No connection to DB", http.StatusInternalServerError)
@@ -142,13 +135,13 @@ func PingDB(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Re
 
 		w.WriteHeader(http.StatusOK)
 
-	}		
+	}
 }
 
 func BatchHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var items []repository.CorrelationItem 
-		
+		var items []repository.CorrelationItem
+
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -161,13 +154,12 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 			return
 		}
 
-		
-		shortens, err := repo.BatchAll(items, userToken)
-		
+		shortens, err := repo.BatchAll(items, userToken, r.Context())
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
-		}	
+		}
 
 		for i := range shortens {
 			shortens[i].ShortURL = baseURL + "/" + shortens[i].ShortURL
@@ -183,6 +175,6 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 		}
 
 		w.Write(buf.Bytes())
-	
-	}		
+
+	}
 }

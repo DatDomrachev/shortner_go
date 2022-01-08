@@ -13,13 +13,17 @@ import (
 func main() {
 
 	config, err := config.New()
-
 	if err != nil {
 		log.Fatalf("failed to configurate:+%v", err)
 	}
 
 	config.InitFlags()
-	repo := repository.New(config.StoragePath, config.DBURL)
+	
+	repo, err := repository.New(config.StoragePath, config.DBURL)
+	if err != nil {
+		log.Fatalf("failed to init repository:+%v", err)
+	}
+
 	s := server.New(config.Address, config.BaseURL, repo)
 
 	c := make(chan os.Signal, 1)

@@ -2,39 +2,37 @@ package repository
 
 import (
 	"bufio"
+	"context"
+	"database/sql"
 	"encoding/json"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
+	_ "github.com/jackc/pgx/v4/stdlib"
+	"log"
 	"os"
 	"strconv"
 	"strings"
-	"log"
-	"context"
 	"time"
-	"database/sql"
-  _ "github.com/jackc/pgx/v4/stdlib"
-  "github.com/jackc/pgconn"
-  "github.com/jackc/pgerrcode"
-//  "github.com/pressly/goose/v3"	 
+	//  "github.com/pressly/goose/v3"
 )
 
 type Repositorier interface {
-	Load(shortURL string) (string, error)
-	Store(url string, userToken string) (string, error)
-	GetByUser(userToken string) ([]MyItem)
-	BatchAll(items []CorrelationItem, userToken string) ([]CorrelationShort, error)
-	PingDB()(bool)
+	Load(shortURL string, ctx context.Context) (string, error)
+	Store(url string, userToken string, ctx context.Context) (string, error)
+	GetByUser(userToken string, ctx context.Context) ([]MyItem, error)
+	BatchAll(items []CorrelationItem, userToken string, ctx context.Context) ([]CorrelationShort, error)
+	PingDB(ctx context.Context) bool
 }
 
-
 type Item struct {
-	FullURL string `json:"url"`
+	FullURL   string `json:"url"`
 	UserToken string `json:"user_token"`
 }
 
 type MyItem struct {
-	ShortURL string `json:"short_url"`
+	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
-
 
 type Result struct {
 	ShortURL string `json:"result"`
@@ -47,29 +45,28 @@ type DataBase struct {
 type Repo struct {
 	StoragePath string
 	items       []Item
-	DB   				*DataBase
+	DB          *DataBase
 }
-
 
 type CorrelationItem struct {
 	CorrectionalID string `json:"correlation_id"`
-	OriginalURL string `json:"original_url"`
+	OriginalURL    string `json:"original_url"`
 }
 
 type CorrelationShort struct {
 	CorrectionalID string `json:"correlation_id"`
-	ShortURL string `json:"short_url"`
+	ShortURL       string `json:"short_url"`
 }
 
-func New(storagePath string, databaseURL string) *Repo {
+func New(storagePath string, databaseURL string) (*Repo, error) {
 	var items []Item
-	dataBase := &DataBase {
-			conn: nil,
+	dataBase := &DataBase{
+		conn: nil,
 	}
 
 	repo := &Repo{
-		StoragePath: storagePath, 
-		DB: 				 dataBase,	
+		StoragePath: storagePath,
+		DB:          dataBase,
 		items:       items,
 	}
 
@@ -77,75 +74,67 @@ func New(storagePath string, databaseURL string) *Repo {
 		err := repo.readFromFile()
 
 		if err != nil {
-			log.Fatalf("failed to Load file:+%v", err)
+			return nil, err
 		}
 	}
-
 
 	if databaseURL != "" {
 		db, err := sql.Open("pgx", databaseURL)
 		if err != nil {
-			db.Close();
-			log.Fatalf("Open DB Failed:%+v", err)
+			db.Close()
+			return nil, err
 		}
 
 		if err := db.Ping(); err != nil {
-			db.Close();
-			log.Fatalf("Open DB Failed:%+v", err)
+			db.Close()
+			return nil, err
 		}
 
-		
-	// Не взлетел гусь на автотестах, жаль
-	//	err = goose.Up(db, "migrations" )
-	//	if err != nil {
-	//		log.Fatalf("failed executing migrations: %v\n", err)
-	//	}
+		// Не взлетел гусь на автотестах, жаль
+		//	err = goose.Up(db, "migrations" )
+		//	if err != nil {
+		//		log.Fatalf("failed executing migrations: %v\n", err)
+		//	}
 
 		_, err = db.Exec("CREATE TABLE if not exists url (id BIGSERIAL primary key, full_url text,user_token text)")
-		
-		if err != nil {
-			log.Fatalf("Сreate DB Failed:%+v", err)
-		}			
-
-		_, err = db.Exec("ALTER TABLE url ADD COLUMN IF NOT EXISTS correlation_id text");
-
 
 		if err != nil {
-			log.Fatalf("Сreate DB Failed:%+v", err)
+			return nil, err
 		}
 
-		
-		_, err = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_urls_constrain ON url (full_url)");	
+		_, err = db.Exec("ALTER TABLE url ADD COLUMN IF NOT EXISTS correlation_id text")
 
 		if err != nil {
-			log.Fatalf("Сreate DB Failed:%+v", err)
+			return nil, err
 		}
 
-		dataBase := &DataBase {
+		_, err = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_urls_constrain ON url (full_url)")
+
+		if err != nil {
+			return nil, err
+		}
+
+		dataBase := &DataBase{
 			conn: db,
 		}
 
-		repo.DB = dataBase					
+		repo.DB = dataBase
 	}
 
-
-	return repo
+	return repo, nil
 }
 
-
-func (r *Repo) GetByUser(user string) ([]MyItem) {
+func (r *Repo) GetByUser(user string, ctx context.Context) ([]MyItem, error) {
 
 	var myItems []MyItem
 
-
 	if r.DB.conn != nil {
+
 		
-		ctx := context.Background()
 		rows, err := r.DB.conn.QueryContext(ctx, "Select id::varchar(255), full_url from url WHERE user_token = $1", user)
 
 		if err != nil {
-			log.Print(err.Error())
-			return myItems
+			return myItems, err
 		}
 
 		for rows.Next() {
@@ -153,8 +142,7 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 			err = rows.Scan(&item.ShortURL, &item.OriginalURL)
 
 			if err != nil {
-				log.Print(err.Error())
-				return myItems
+				return myItems, err
 			}
 
 			myItems = append(myItems, item)
@@ -162,33 +150,32 @@ func (r *Repo) GetByUser(user string) ([]MyItem) {
 
 		err = rows.Err()
 		if err != nil {
-			log.Print(err.Error())
+			return myItems, err
 		}
 
-		return myItems
+		return myItems, nil
 
-	} 
+	}
 
 	for i := range r.items {
 		if user == r.items[i].UserToken {
-		  myItem := MyItem{
-		 		ShortURL: strconv.Itoa(i+1),
-		 		OriginalURL: r.items[i].FullURL,
+			myItem := MyItem{
+				ShortURL:    strconv.Itoa(i + 1),
+				OriginalURL: r.items[i].FullURL,
 			}
 			myItems = append(myItems, myItem)
 		}
 	}
-		
-	return myItems
+
+	return myItems, nil
 }
 
-func (r *Repo) Load(shortURL string) (string, error) {
+func (r *Repo) Load(shortURL string, ctx context.Context) (string, error) {
 
 	fullURL := ""
 	param := strings.TrimPrefix(shortURL, `/`)
 
 	id, err := strconv.Atoi(param)
-
 
 	if err != nil {
 		return fullURL, err
@@ -202,18 +189,18 @@ func (r *Repo) Load(shortURL string) (string, error) {
 	}
 
 	if r.DB.conn != nil {
-		err = r.DB.conn.QueryRow("SELECT full_url from url WHERE id = $1", id).Scan(&fullURL)
+		row := r.DB.conn.QueryRowContext(ctx, "SELECT full_url from url WHERE id = $1", id)
+		err := row.Scan(&fullURL)
 		if err != nil {
 			log.Print(err.Error())
 			return "", err
 		}
-	}	
+	}
 
 	return fullURL, nil
 }
 
-func (r *Repo) Store(url string, userToken string) (string, error) {
-	
+func (r *Repo) Store(url string, userToken string, ctx context.Context) (string, error) {
 
 	newItem := Item{FullURL: url, UserToken: userToken}
 	r.items = append(r.items, newItem)
@@ -230,26 +217,26 @@ func (r *Repo) Store(url string, userToken string) (string, error) {
 	}
 
 	if r.DB.conn != nil {
-		err := r.DB.conn.QueryRow("Insert into url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken).Scan(&result)
-		
+		row := r.DB.conn.QueryRowContext(ctx, "Insert into url (full_url, user_token) VALUES ($1, $2) RETURNING id", url, userToken)
+		err := row.Scan(&result)
+
 		if err != nil {
 			err, ok := err.(*pgconn.PgError)
 
-		 	if ok && err.Code == pgerrcode.UniqueViolation {
-		 		r.DB.conn.QueryRow("SELECT id from url WHERE full_url = $1", url).Scan(&result)
-		    return "conflict:"+strconv.Itoa(result), nil
+			if ok && err.Code == pgerrcode.UniqueViolation {
+				row = r.DB.conn.QueryRowContext(ctx, "SELECT id from url WHERE full_url = $1", url)
+				row.Scan(&result)
+				return "conflict:" + strconv.Itoa(result), nil
 			} else {
 				return "", err
 			}
 		}
 	}
 
-
 	return strconv.Itoa(result), nil
 }
 
-
-func (r *Repo) readFromFile() (error) {
+func (r *Repo) readFromFile() error {
 	file, err := os.OpenFile(r.StoragePath, os.O_RDONLY|os.O_CREATE, 0777)
 
 	if err != nil {
@@ -261,7 +248,7 @@ func (r *Repo) readFromFile() (error) {
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
-	
+
 		data := scanner.Bytes()
 
 		item := Item{}
@@ -308,44 +295,43 @@ func (r *Repo) writeToFile(newItem Item) error {
 
 }
 
-func (r *Repo) PingDB() (bool) {
+func (r *Repo) PingDB(ctx context.Context) bool {
 	if r.DB.conn == nil {
 		return false
 	}
 
-	var bgCtx = context.Background()		
-	ctx, cancel := context.WithTimeout(bgCtx, 2*time.Second)
-    defer cancel()
-    err:= r.DB.conn.PingContext(ctx)
-    if err != nil {
-       log.Print(err.Error())
-       return false;
-    }
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	err := r.DB.conn.PingContext(ctx)
+	if err != nil {
+		log.Print(err.Error())
+		return false
+	}
 
-    return true;
+	return true
 }
 
-func (r *Repo) BatchAll(items []CorrelationItem, userToken string) ([]CorrelationShort, error) {
+func (r *Repo) BatchAll(items []CorrelationItem, userToken string, ctx context.Context) ([]CorrelationShort, error) {
 
 	var shortens []CorrelationShort
 
-  id := 0
+	id := 0
 
-  for _, i := range items {
-    err := r.DB.conn.QueryRow("Insert into url (full_url, user_token, correlation_id) VALUES($1,$2,$3) ON CONFLICT(full_url) DO UPDATE SET full_url=EXCLUDED.full_url RETURNING id", i.OriginalURL, userToken, i.CorrectionalID).Scan(&id) 
-    if err != nil {
-			return nil, err;
-		}	
-       
-    shorten:= CorrelationShort {
-    	CorrectionalID: i.CorrectionalID,
-    	ShortURL:  strconv.Itoa(id),
-    }
+	for _, i := range items {
+		row := r.DB.conn.QueryRowContext(ctx, "Insert into url (full_url, user_token, correlation_id) VALUES($1,$2,$3) ON CONFLICT(full_url) DO UPDATE SET full_url=EXCLUDED.full_url RETURNING id", i.OriginalURL, userToken, i.CorrectionalID)
+		err := row.Scan(&id)
+		if err != nil {
+			return nil, err
+		}
 
-    shortens = append(shortens, shorten)
+		shorten := CorrelationShort{
+			CorrectionalID: i.CorrectionalID,
+			ShortURL:       strconv.Itoa(id),
+		}
 
-  }
- 
+		shortens = append(shortens, shorten)
 
-  return shortens, nil
+	}
+
+	return shortens, nil
 }

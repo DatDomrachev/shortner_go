@@ -1,23 +1,23 @@
 package server
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"github.com/DatDomrachev/shortner_go/internal/app/handlers"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"log"
-	"net/http"
-	"time"
-	"compress/gzip"
-	"strings"
 	"io"
 	"io/ioutil"
-	"bytes"
-	"encoding/hex"
-	"crypto/hmac"
-    "crypto/sha256"
-    "crypto/rand"
+	"log"
+	"net/http"
+	"strings"
+	"time"
 )
 
 type Server interface {
@@ -25,21 +25,21 @@ type Server interface {
 }
 
 type srv struct {
-	address 	string
-	baseURL 	string
-	repo    	repository.Repositorier
+	address string
+	baseURL string
+	repo    repository.Repositorier
 }
 
 type gzipWriter struct {
-    http.ResponseWriter
-    Writer io.Writer
+	http.ResponseWriter
+	Writer io.Writer
 }
 
 type contextKey string
 
 func (w gzipWriter) Write(b []byte) (int, error) {
-    return w.Writer.Write(b)
-} 
+	return w.Writer.Write(b)
+}
 
 func New(address string, baseURL string, repo repository.Repositorier) *srv {
 	server := &srv{
@@ -92,141 +92,128 @@ func (s *srv) ConfigureRouter() *chi.Mux {
 	router.Use(GzipHandle)
 	router.Use(CookieManager)
 
-	router.Get("/{Id}", handlers.SimpleReadHandler(s.repo)) 
+	router.Get("/{Id}", handlers.SimpleReadHandler(s.repo))
 	router.Post("/", func(rw http.ResponseWriter, r *http.Request) {
-    	u := r.Context().Value(contextKey("user_token")).(string)
-    	handlers.SimpleWriteHandler(s.repo, s.baseURL, u)(rw,r)
-    })
+		u := r.Context().Value(contextKey("user_token")).(string)
+		handlers.SimpleWriteHandler(s.repo, s.baseURL, u)(rw, r)
+	})
 	router.Get("/user/urls", func(rw http.ResponseWriter, r *http.Request) {
-    	u := r.Context().Value(contextKey("user_token")).(string)
-    	handlers.AllMyURLSHandler(s.repo, s.baseURL, u)(rw,r)
-    })
-    router.Get("/ping", handlers.PingDB(s.repo))
-    router.Post("/api/shorten/batch", func(rw http.ResponseWriter, r *http.Request) {
-    	u := r.Context().Value(contextKey("user_token")).(string) 
-    	handlers.BatchHandler(s.repo, s.baseURL, u)(rw,r)
-    })
-    router.Post("/api/shorten", func(rw http.ResponseWriter, r *http.Request) {
-    	u := r.Context().Value(contextKey("user_token")).(string)
-    	handlers.SimpleJSONHandler(s.repo, s.baseURL, u)(rw,r)
-    })
+		u := r.Context().Value(contextKey("user_token")).(string)
+		handlers.AllMyURLSHandler(s.repo, s.baseURL, u)(rw, r)
+	})
+	router.Get("/ping", handlers.PingDB(s.repo))
+	router.Post("/api/shorten/batch", func(rw http.ResponseWriter, r *http.Request) {
+		u := r.Context().Value(contextKey("user_token")).(string)
+		handlers.BatchHandler(s.repo, s.baseURL, u)(rw, r)
+	})
+	router.Post("/api/shorten", func(rw http.ResponseWriter, r *http.Request) {
+		u := r.Context().Value(contextKey("user_token")).(string)
+		handlers.SimpleJSONHandler(s.repo, s.baseURL, u)(rw, r)
+	})
 	return router
 }
 
-
 func GzipHandle(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-      
-        if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-            next.ServeHTTP(w, r)
-            return
-        }
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-        
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
 
-        gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
-        if err != nil {
-            io.WriteString(w, err.Error())
-            return
-        }
-        defer gz.Close()
+		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		if err != nil {
+			io.WriteString(w, err.Error())
+			return
+		}
+		defer gz.Close()
 
-        if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-            reader, err := gzip.NewReader(r.Body)
-       		
-	        if err != nil {
-	            io.WriteString(w, err.Error())
-	            return
-	        }
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+			reader, err := gzip.NewReader(r.Body)
 
-	        defer reader.Close()
+			if err != nil {
+				io.WriteString(w, err.Error())
+				return
+			}
 
-	        b, err := ioutil.ReadAll(reader)
+			defer reader.Close()
 
-	        if err != nil {
-	            io.WriteString(w, err.Error())
-	            return
-	        }
+			b, err := ioutil.ReadAll(reader)
 
+			if err != nil {
+				io.WriteString(w, err.Error())
+				return
+			}
 
-	        r.Body = ioutil.NopCloser(bytes.NewBuffer(b))    
-        }
+			r.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+		}
 
-           
-
-        w.Header().Set("Content-Encoding", "gzip")
-        next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
-    })
+		w.Header().Set("Content-Encoding", "gzip")
+		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+	})
 }
 
-
 func newCookie(key []byte) (cookie *http.Cookie, err error) {
-	
+
 	//рандомные байты
-    src := make([]byte, 16)
-    _, err = rand.Read(src)
-    if err != nil {
-        return nil, err
-    }
+	src := make([]byte, 16)
+	_, err = rand.Read(src)
+	if err != nil {
+		return nil, err
+	}
 
-    
-    //подпись	
-    h := hmac.New(sha256.New, key)
-    h.Write(src)
+	//подпись
+	h := hmac.New(sha256.New, key)
+	h.Write(src)
 
-    cookie = &http.Cookie {
-	        	Name:   "user_token",
-	        	Value:  hex.EncodeToString(src) + hex.EncodeToString(h.Sum(nil)),
-	        }	
+	cookie = &http.Cookie{
+		Name:  "user_token",
+		Value: hex.EncodeToString(src) + hex.EncodeToString(h.Sum(nil)),
+	}
 
-    return cookie, nil;
+	return cookie, nil
 }
 
 func CookieManager(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    	var secretkey = []byte("secret key of My Castle")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var secretkey = []byte("secret key of My Castle")
 
+		cookie, err := r.Cookie("user_token")
 
-    	cookie, err := r.Cookie("user_token")
+		if err == nil {
 
-    	if (err == nil) {
-    		
-	    	userKey := cookie.Value
+			userKey := cookie.Value
 
-	    	data, err := hex.DecodeString(userKey)
+			data, err := hex.DecodeString(userKey)
 
-	    	if err != nil {
-		        log.Fatalf("CookieManager error:%+v", err)
-		    }
-		    
-		   
-		   
-		    h := hmac.New(sha256.New, secretkey)
-		    h.Write(data[:16])
-		    sign := h.Sum(nil) 
-
-		    if !hmac.Equal(sign, data[16:]) {
-		       
-		    	cookie, err = newCookie(secretkey)
-		    	if err != nil {
-				    log.Fatalf("CookieManager error:%+v", err)
-				}
-		    }
-
-    	} else {
-
-    		cookie, err = newCookie(secretkey)
-    		if err != nil {
-			    log.Fatalf("CookieManager error:%+v", err)
+			if err != nil {
+				log.Fatalf("CookieManager error:%+v", err)
 			}
-    	}
 
-    	
+			h := hmac.New(sha256.New, secretkey)
+			h.Write(data[:16])
+			sign := h.Sum(nil)
 
-    	http.SetCookie(w, cookie);
+			if !hmac.Equal(sign, data[16:]) {
 
-    	ctx := context.WithValue(r.Context(), contextKey("user_token"), cookie.Value)
-    	
-    	next.ServeHTTP(w, r.WithContext(ctx))
-    })
-}    
+				cookie, err = newCookie(secretkey)
+				if err != nil {
+					log.Fatalf("CookieManager error:%+v", err)
+				}
+			}
+
+		} else {
+
+			cookie, err = newCookie(secretkey)
+			if err != nil {
+				log.Fatalf("CookieManager error:%+v", err)
+			}
+		}
+
+		http.SetCookie(w, cookie)
+
+		ctx := context.WithValue(r.Context(), contextKey("user_token"), cookie.Value)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
