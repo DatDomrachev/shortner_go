@@ -6,7 +6,7 @@ import (
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
 	"io/ioutil"
 	"net/http"
-	"strings"
+	"errors"
 )
 
 func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
@@ -31,21 +31,23 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string, userToken 
 		}
 
 		result, err := repo.Store(string(data), userToken, r.Context())
+		
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+			var ce *repository.ConflictError
 
-		w.Header().Set("content-type", "application/json")
-
-		if strings.Contains(result, "conflict:") {
-			w.WriteHeader(http.StatusConflict)
-			result = strings.ReplaceAll(result, "conflict:", "")
-
+			if errors.As(err, &ce) {
+				w.WriteHeader(http.StatusConflict)
+				result = ce.ConflictID
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		} else {
+			w.Header().Set("content-type", "application/json")
 			w.WriteHeader(http.StatusCreated)
 		}
 
+		
 		resp := baseURL + "/" + result
 
 		w.Write([]byte(resp))
@@ -65,18 +67,21 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string, userToken s
 		result, err := repo.Store(url.FullURL, userToken, r.Context())
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+			var ce *repository.ConflictError
 
-		w.Header().Set("content-type", "application/json")
-		if strings.Contains(result, "conflict:") {
-			w.WriteHeader(http.StatusConflict)
-			result = strings.ReplaceAll(result, "conflict:", "")
-
+			if errors.As(err, &ce) {
+				w.Header().Set("content-type", "application/json")
+				w.WriteHeader(http.StatusConflict)
+				result = ce.ConflictID
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		} else {
+			w.Header().Set("content-type", "application/json")
 			w.WriteHeader(http.StatusCreated)
 		}
+
 
 		newResult := repository.Result{ShortURL: baseURL + "/" + result}
 

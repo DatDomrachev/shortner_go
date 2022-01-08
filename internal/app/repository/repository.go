@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
 	//  "github.com/pressly/goose/v3"
 )
 
@@ -56,6 +57,15 @@ type CorrelationItem struct {
 type CorrelationShort struct {
 	CorrectionalID string `json:"correlation_id"`
 	ShortURL       string `json:"short_url"`
+}
+
+type ConflictError struct {
+	ConflictID string
+	Err error
+}
+
+func (ce *ConflictError) Error() string {
+	return fmt.Sprintf("%v %v", ce.ConflictID, ce.Err)
 }
 
 func New(storagePath string, databaseURL string) (*Repo, error) {
@@ -226,7 +236,10 @@ func (r *Repo) Store(url string, userToken string, ctx context.Context) (string,
 			if ok && err.Code == pgerrcode.UniqueViolation {
 				row = r.DB.conn.QueryRowContext(ctx, "SELECT id from url WHERE full_url = $1", url)
 				row.Scan(&result)
-				return "conflict:" + strconv.Itoa(result), nil
+				return "", &ConflictError {
+					ConflictID: strconv.Itoa(result),
+					Err: err,
+				}
 			} else {
 				return "", err
 			}
