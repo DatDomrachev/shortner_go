@@ -18,10 +18,10 @@ import (
 )
 
 type Repositorier interface {
-	Load(shortURL string, ctx context.Context) (string, error)
-	Store(url string, userToken string, ctx context.Context) (string, error)
-	GetByUser(userToken string, ctx context.Context) ([]MyItem, error)
-	BatchAll(items []CorrelationItem, userToken string, ctx context.Context) ([]CorrelationShort, error)
+	Load(ctx context.Context, shortURL string) (string, error)
+	Store(ctx context.Context, url string, userToken string) (string, error)
+	GetByUser(ctx context.Context, userToken string) ([]MyItem, error)
+	BatchAll(ctx context.Context, items []CorrelationItem, userToken string) ([]CorrelationShort, error)
 	PingDB(ctx context.Context) bool
 }
 
@@ -134,7 +134,7 @@ func New(storagePath string, databaseURL string) (*Repo, error) {
 	return repo, nil
 }
 
-func (r *Repo) GetByUser(user string, ctx context.Context) ([]MyItem, error) {
+func (r *Repo) GetByUser(ctx context.Context, user string) ([]MyItem, error) {
 
 	var myItems []MyItem
 
@@ -180,7 +180,7 @@ func (r *Repo) GetByUser(user string, ctx context.Context) ([]MyItem, error) {
 	return myItems, nil
 }
 
-func (r *Repo) Load(shortURL string, ctx context.Context) (string, error) {
+func (r *Repo) Load(ctx context.Context, shortURL string) (string, error) {
 
 	fullURL := ""
 	param := strings.TrimPrefix(shortURL, `/`)
@@ -210,7 +210,7 @@ func (r *Repo) Load(shortURL string, ctx context.Context) (string, error) {
 	return fullURL, nil
 }
 
-func (r *Repo) Store(url string, userToken string, ctx context.Context) (string, error) {
+func (r *Repo) Store(ctx context.Context, url string, userToken string) (string, error) {
 
 	newItem := Item{FullURL: url, UserToken: userToken}
 	r.items = append(r.items, newItem)
@@ -324,7 +324,7 @@ func (r *Repo) PingDB(ctx context.Context) bool {
 	return true
 }
 
-func (r *Repo) BatchAll(items []CorrelationItem, userToken string, ctx context.Context) ([]CorrelationShort, error) {
+func (r *Repo) BatchAll(ctx context.Context, items []CorrelationItem, userToken string) ([]CorrelationShort, error) {
 
 	var shortens []CorrelationShort
 

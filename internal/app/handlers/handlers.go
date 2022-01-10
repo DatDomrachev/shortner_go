@@ -11,7 +11,7 @@ import (
 
 func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fullURL, err := repo.Load(r.URL.Path, r.Context())
+		fullURL, err := repo.Load(r.Context(), r.URL.Path)
 
 		if err != nil {
 			http.Error(w, "Not found", http.StatusBadRequest)
@@ -30,7 +30,7 @@ func SimpleWriteHandler(repo repository.Repositorier, baseURL string, userToken 
 			return
 		}
 
-		result, err := repo.Store(string(data), userToken, r.Context())
+		result, err := repo.Store(r.Context(), string(data), userToken)
 		
 		if err != nil {
 			var ce *repository.ConflictError
@@ -64,7 +64,7 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string, userToken s
 			return
 		}
 
-		result, err := repo.Store(url.FullURL, userToken, r.Context())
+		result, err := repo.Store(r.Context(), url.FullURL, userToken)
 
 		if err != nil {
 			var ce *repository.ConflictError
@@ -98,7 +98,7 @@ func SimpleJSONHandler(repo repository.Repositorier, baseURL string, userToken s
 func AllMyURLSHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		items, err := repo.GetByUser(userToken, r.Context())
+		items, err := repo.GetByUser(r.Context(), userToken)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -159,7 +159,7 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 			return
 		}
 
-		shortens, err := repo.BatchAll(items, userToken, r.Context())
+		shortens, err := repo.BatchAll(r.Context(), items, userToken)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
