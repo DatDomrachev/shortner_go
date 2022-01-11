@@ -28,11 +28,11 @@ func testRequest(t *testing.T, config *config.Config, repo *repository.Repo, met
 	w := httptest.NewRecorder()
 
 	if method == "POST" && path == "/" {
-		SimpleWriteHandler(repo, config.BaseURL)(w, request)
+		SimpleWriteHandler(repo, config.BaseURL, "1")(w, request)
 	}
 
 	if method == "POST" && path == "/api/shorten" {
-		SimpleJSONHandler(repo, config.BaseURL)(w, request)
+		SimpleJSONHandler(repo, config.BaseURL, "1")(w, request)
 	}
 
 	if method == "GET" {
@@ -57,7 +57,10 @@ func TestRouter(t *testing.T) {
 		log.Printf("failed to configurate:+%v\n", err)
 	}
 
-	repo := repository.New(config.StoragePath)
+	repo, err := repository.New(config.StoragePath, "")
+	if err != nil {
+		log.Fatalf("failed to init repository:+%v", err)
+	}
 	result1, body1 := testRequest(t, config, repo, "POST", "/", "http://google.com")
 	assert.Equal(t, 201, result1.StatusCode)
 	assert.Equal(t, "application/json", result1.Header.Get("Content-Type"))
