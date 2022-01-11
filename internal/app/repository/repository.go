@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 	"fmt"
-	"github.com/pressly/goose/v3"
+	//"github.com/pressly/goose/v3"
 )
 
 type Repositorier interface {
