@@ -101,28 +101,28 @@ func New(storagePath string, databaseURL string) (*Repo, error) {
 		}
 
 		// Не взлетел гусь на автотестах, жаль
-			err = goose.Up(db, "migrations" )
-			if err != nil {
-				log.Fatalf("failed executing migrations: %v\n", err)
-			}
-
-		// _, err = db.Exec("CREATE TABLE if not exists url (id BIGSERIAL primary key, full_url text,user_token text)")
-
+		// err = goose.Up(db, "migrations" )
 		// if err != nil {
-		// 	return nil, err
+		// 	log.Fatalf("failed executing migrations: %v\n", err)
 		// }
 
-		// _, err = db.Exec("ALTER TABLE url ADD COLUMN IF NOT EXISTS correlation_id text")
+		_, err = db.Exec("CREATE TABLE if not exists url (id BIGSERIAL primary key, full_url text,user_token text)")
 
-		// if err != nil {
-		// 	return nil, err
-		// }
+		if err != nil {
+			return nil, err
+		}
 
-		// _, err = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_urls_constrain ON url (full_url)")
+		_, err = db.Exec("ALTER TABLE url ADD COLUMN IF NOT EXISTS correlation_id text")
 
-		// if err != nil {
-		// 	return nil, err
-		// }
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_urls_constrain ON url (full_url)")
+
+		if err != nil {
+			return nil, err
+		}
 
 		dataBase := &DataBase{
 			conn: db,
