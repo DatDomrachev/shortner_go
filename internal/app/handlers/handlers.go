@@ -14,8 +14,15 @@ func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter,
 		fullURL, err := repo.Load(r.Context(), r.URL.Path)
 
 		if err != nil {
-			http.Error(w, "Not found", http.StatusBadRequest)
-			return
+			var ge *repository.GoneError
+
+			if errors.As(err, &ge) {
+				http.Error(w, "Deleted", http.StatusGone)
+				return
+			} else {
+				http.Error(w, "Not found", http.StatusBadRequest)
+				return
+			}
 		}
 
 		http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
@@ -183,3 +190,26 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 
 	}
 }
+
+func DeleteItemsHandler(repo repository.Repositorier, userToken string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+
+		// err = json.Unmarshal(body, &ids)
+		// if err != nil {
+		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+		// 	return
+		// }
+
+		
+		go repo.DeleteByUser(r.Context(), string(body), userToken)
+
+		w.WriteHeader(http.StatusAccepted)
+
+	}
+}	
