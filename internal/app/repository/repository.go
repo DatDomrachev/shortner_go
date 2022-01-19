@@ -380,7 +380,7 @@ func (r *Repo) DeleteByUser(ctx context.Context, ids string, userToken string) (
 	}
 
 	
-	_,err := r.DB.conn.ExecContext(ctx, "UPDATE url SET is_deleted = false WHERE user_token = $1 AND id IN $2", userToken, ids)
+	_,err := r.DB.conn.ExecContext(ctx, "UPDATE url SET is_deleted = true WHERE user_token = $1 AND id IN $2", userToken, ids)
 	
 	if err != nil {
 		return err
