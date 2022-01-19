@@ -223,7 +223,7 @@ func (r *Repo) Load(ctx context.Context, shortURL string) (string, error) {
 			return "", err
 		}
 
-		if isDeleted == true {
+		if isDeleted {
 			return "", &GoneError {
 				Message: "Url was deleted",
 			}
