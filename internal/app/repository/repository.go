@@ -23,7 +23,7 @@ type Repositorier interface {
 	GetByUser(ctx context.Context, userToken string) ([]MyItem, error)
 	BatchAll(ctx context.Context, items []CorrelationItem, userToken string) ([]CorrelationShort, error)
 	PingDB(ctx context.Context) bool
-	DeleteByUser(ctx context.Context, ids string, userToken string)(error)
+	DeleteByUser(ctx context.Context, ids []string, userToken string)(error)
 }
 
 type Item struct {
@@ -68,6 +68,7 @@ type ConflictError struct {
 type GoneError struct {
 	Message string
 }
+
 
 func (ce *ConflictError) Error() string {
 	return fmt.Sprintf("%v %v", ce.ConflictID, ce.Err)
@@ -215,7 +216,7 @@ func (r *Repo) Load(ctx context.Context, shortURL string) (string, error) {
 		}
 	}
 
-	if r.DB.conn != nil {
+	if r.DB.conn != nil { 
 		row := r.DB.conn.QueryRowContext(ctx, "SELECT full_url, is_deleted from url WHERE id = $1", id)
 		err := row.Scan(&fullURL, &isDeleted)
 		if err != nil {
@@ -224,6 +225,7 @@ func (r *Repo) Load(ctx context.Context, shortURL string) (string, error) {
 		}
 
 		if isDeleted {
+			log.Print("wasDeleted")
 			return "", &GoneError {
 				Message: "Url was deleted",
 			}
@@ -373,19 +375,37 @@ func (r *Repo) BatchAll(ctx context.Context, items []CorrelationItem, userToken 
 	return shortens, nil
 }
 
-func (r *Repo) DeleteByUser(ctx context.Context, ids string, userToken string) (error) {
+func (r *Repo) DeleteByUser(ctx context.Context, ids []string, userToken string) (error) {
 	
-	if len(ids) == 0 {
-		return nil
-	}
-
-	
-	_,err := r.DB.conn.ExecContext(ctx, "UPDATE url SET is_deleted = true WHERE user_token = $1 AND id IN $2", userToken, ids)
+	tx, err := r.DB.conn.Begin()
 	
 	if err != nil {
+		log.Print(err.Error())
 		return err
 	}
 
+	stmt, err := tx.Prepare("UPDATE url SET is_deleted = true WHERE user_token = $1 AND id = $2")
+	if err != nil {
+		log.Print(err.Error())
+		return err
+	}
+
+	for i := range ids {
+		_,err := stmt.Exec(userToken, ids[i])
+		if err != nil {
+			log.Print(err.Error())
+			if err = tx.Rollback(); err != nil {
+				log.Printf("unable to Rollback: %v", err)
+			}
+			
+			return err
+		}
+	} 
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("unable to Commit: %v", err)
+	}
+		
 	return nil
 
 }

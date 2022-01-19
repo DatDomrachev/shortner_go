@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"errors"
+	"strings"
 )
 
 func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
@@ -191,7 +192,7 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 	}
 }
 
-func DeleteItemsHandler(repo repository.Repositorier, userToken string) func(w http.ResponseWriter, r *http.Request) {
+func DeleteItemsHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -199,16 +200,25 @@ func DeleteItemsHandler(repo repository.Repositorier, userToken string) func(w h
 			return
 		}
 
+		var shortens []string
+		var ids []string
+	
+		err = json.Unmarshal(body, &shortens)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return 
+		}
 
-		// err = json.Unmarshal(body, &ids)
-		// if err != nil {
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	return
-		// }
+		for i := range shortens {
+			if len(shortens[i]) > 0 {
+				ids = append(ids, strings.ReplaceAll(shortens[i], baseURL+"/", ""))
+			}
+		}
 
+		if len(ids) > 0 {
+			repo.DeleteByUser(r.Context(), ids, userToken)
+		}
 		
-		go repo.DeleteByUser(r.Context(), string(body), userToken)
-
 		w.WriteHeader(http.StatusAccepted)
 
 	}
