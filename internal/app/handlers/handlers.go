@@ -207,7 +207,7 @@ func DeleteItemsHandler(repo repository.Repositorier, userToken string) func(w h
 		// }
 
 		
-		go repo.DeleteByUser(r.Context(), string(body), userToken)
+		repo.DeleteByUser(r.Context(), string(body), userToken)
 
 		w.WriteHeader(http.StatusAccepted)
 
