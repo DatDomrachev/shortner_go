@@ -110,7 +110,7 @@ func (s *srv) ConfigureRouter() *chi.Mux {
 		u := r.Context().Value(contextKey("user_token")).(string)
 		handlers.SimpleJSONHandler(s.repo, s.baseURL, u)(rw, r)
 	})
-	router.Delete("api/user/urls", func(rw http.ResponseWriter, r *http.Request) {
+	router.Delete("/api/user/urls", func(rw http.ResponseWriter, r *http.Request) {
 		u := r.Context().Value(contextKey("user_token")).(string)
 		handlers.DeleteItemsHandler(s.repo, u)(rw, r)
 	})
