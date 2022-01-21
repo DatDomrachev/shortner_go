@@ -2,6 +2,7 @@ package wpool
 
 import (
 	"context"
+	"log"
 )
 
 type JobID string
@@ -36,7 +37,7 @@ func (j Job) execute(ctx context.Context) Result {
 			Descriptor: j.Descriptor,
 		}
 	}
-
+	log.Printf("executed %v", j.Descriptor.ID)
 	return Result{
 		Value:      value,
 		Descriptor: j.Descriptor,
