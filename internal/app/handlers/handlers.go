@@ -4,11 +4,30 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
+	"github.com/DatDomrachev/shortner_go/internal/app/wpool"
 	"io/ioutil"
 	"net/http"
 	"errors"
 	"strings"
+	"context"
+	"fmt"
+	"time"
 )
+
+type JobData struct {
+	WhereIn   string
+	UserToken string
+}
+
+type ArgsError struct {
+	Message string
+}
+
+
+func (ae *ArgsError) Error() string {
+	return fmt.Sprintf("%v %v", ae.Message)
+}
+
 
 func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -192,7 +211,7 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 	}
 }
 
-func DeleteItemsHandler(repo repository.Repositorier, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
+func DeleteItemsHandler(repo repository.Repositorier, wp wpool.WorkerPool, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -216,7 +235,36 @@ func DeleteItemsHandler(repo repository.Repositorier, baseURL string, userToken 
 		}
 
 		if len(ids) > 0 {
-			repo.DeleteByUser(r.Context(), ids, userToken)
+
+			
+			whereIn := strings.Join(ids, ",")
+
+			execFn := func(ctx context.Context, args interface{}) (interface{}, error) {		
+				argVal, ok := args.(JobData)
+			
+				if !ok {
+					return nil, &ArgsError {
+						Message: "Bad arguments",
+					}
+				}
+
+				return repo.DeleteByUser(ctx, argVal.WhereIn, argVal.UserToken)
+			}
+
+			job := wpool.Job {
+				Descriptor: wpool.JobDescriptor{
+					ID:       wpool.JobID(fmt.Sprintf("%v", userToken+"_"+ string(time.Now().Unix()))),
+					JType:    "delete",
+					Metadata: nil,
+				},
+				ExecFn: execFn,
+				Args:   JobData{
+					WhereIn:   whereIn,
+					UserToken: userToken,
+				},
+			}
+
+			wp.Jobs <- job
 		}
 		
 		w.WriteHeader(http.StatusAccepted)

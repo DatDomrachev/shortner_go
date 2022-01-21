@@ -23,7 +23,7 @@ type Repositorier interface {
 	GetByUser(ctx context.Context, userToken string) ([]MyItem, error)
 	BatchAll(ctx context.Context, items []CorrelationItem, userToken string) ([]CorrelationShort, error)
 	PingDB(ctx context.Context) bool
-	DeleteByUser(ctx context.Context, ids []string, userToken string)(error)
+	DeleteByUser(ctx context.Context, ids string, userToken string)(QueryResult, error)
 }
 
 type Item struct {
@@ -67,6 +67,10 @@ type ConflictError struct {
 
 type GoneError struct {
 	Message string
+}
+
+type QueryResult struct {
+	Message string 
 }
 
 
@@ -375,37 +379,15 @@ func (r *Repo) BatchAll(ctx context.Context, items []CorrelationItem, userToken 
 	return shortens, nil
 }
 
-func (r *Repo) DeleteByUser(ctx context.Context, ids []string, userToken string) (error) {
+func (r *Repo) DeleteByUser(ctx context.Context, ids string, userToken string) (QueryResult, error) {
 	
-	tx, err := r.DB.conn.Begin()
-	
+	_, err := r.DB.conn.ExecContext(ctx, "UPDATE url SET is_deleted = true WHERE user_token = $1 AND id IN ("+ ids+")", userToken)
+
 	if err != nil {
 		log.Print(err.Error())
-		return err
-	}
-
-	stmt, err := tx.Prepare("UPDATE url SET is_deleted = true WHERE user_token = $1 AND id = $2")
-	if err != nil {
-		log.Print(err.Error())
-		return err
-	}
-
-	for i := range ids {
-		_,err := stmt.Exec(userToken, ids[i])
-		if err != nil {
-			log.Print(err.Error())
-			if err = tx.Rollback(); err != nil {
-				log.Printf("unable to Rollback: %v", err)
-			}
-			
-			return err
-		}
-	} 
-
-	if err := tx.Commit(); err != nil {
-		log.Printf("unable to Commit: %v", err)
+		return QueryResult{ Message: "fail" }, err
 	}
 		
-	return nil
+	return QueryResult{ Message: "done" } ,nil
 
 }
