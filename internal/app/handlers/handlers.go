@@ -25,7 +25,7 @@ type ArgsError struct {
 
 
 func (ae *ArgsError) Error() string {
-	return fmt.Sprintf("%v %v", ae.Message)
+	return fmt.Sprintf("%v", ae.Message)
 }
 
 
@@ -251,9 +251,10 @@ func DeleteItemsHandler(repo repository.Repositorier, wp wpool.WorkerPool, baseU
 				return repo.DeleteByUser(ctx, argVal.WhereIn, argVal.UserToken)
 			}
 
+			time := time.Now().Unix()	
 			job := wpool.Job {
 				Descriptor: wpool.JobDescriptor{
-					ID:       wpool.JobID(fmt.Sprintf("%v", userToken+"_"+ string(time.Now().Unix()))),
+					ID:       wpool.JobID(fmt.Sprintf("%v_%v", userToken, time)),
 					JType:    "delete",
 					Metadata: nil,
 				},

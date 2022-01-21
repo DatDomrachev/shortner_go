@@ -59,7 +59,7 @@ func (wp WorkerPool) Results() <-chan Result {
 }
 
 func (wp WorkerPool) GenerateFrom(jobsBulk []Job) {
-	for i, _ := range jobsBulk {
+	for i := range jobsBulk {
 		wp.Jobs <- jobsBulk[i]
 	}
 	close(wp.Jobs)
