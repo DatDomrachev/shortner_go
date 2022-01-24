@@ -6,11 +6,10 @@ import (
 	"sync"
 )
 
-func worker(ctx context.Context, wg *sync.WaitGroup, Jobs <-chan Job, results chan<- Result) {
-	defer wg.Done()
+func worker(ctx context.Context, jobs <-chan Job, results chan<- Result) {
 	for {
 		select {
-		case job, ok := <-Jobs:
+		case job, ok := <-jobs:
 			if !ok {
 				return
 			}
@@ -27,40 +26,43 @@ func worker(ctx context.Context, wg *sync.WaitGroup, Jobs <-chan Job, results ch
 
 type WorkerPool struct {
 	workersCount int
-	Jobs         chan Job
+	jobs         chan Job
 	results      chan Result
-	Done         chan struct{}
 }
 
-func New(wcount int) WorkerPool {
-	return WorkerPool{
+type WorkerPooler interface {
+	Run(ctx context.Context) 
+	GenerateFrom(jobsBulk Job)
+}
+
+func New(wcount int) (*WorkerPool) {
+	
+	workerPool := &WorkerPool{
 		workersCount: wcount,
-		Jobs:         make(chan Job, wcount),
+		jobs:         make(chan Job, wcount),
 		results:      make(chan Result, wcount),
-		Done:         make(chan struct{}),
 	}
+
+	return workerPool
 }
 
-func (wp WorkerPool) Run(ctx context.Context) {
+func (wp *WorkerPool) Run(ctx context.Context) {
 	var wg sync.WaitGroup
 
 	for i := 0; i < wp.workersCount; i++ {
 		wg.Add(1)
-		go worker(ctx, &wg, wp.Jobs, wp.results)
+		go func() {
+			defer wg.Done()
+			worker(ctx, wp.jobs, wp.results)
+		}()
 	}
 
 	wg.Wait()
-	close(wp.Done)
 	close(wp.results)
 }
 
-func (wp WorkerPool) Results() <-chan Result {
-	return wp.results
-}
 
-func (wp WorkerPool) GenerateFrom(jobsBulk []Job) {
-	for i := range jobsBulk {
-		wp.Jobs <- jobsBulk[i]
-	}
-	close(wp.Jobs)
+func (wp *WorkerPool) GenerateFrom(jobBulk Job) {
+		wp.jobs <- jobBulk
+	close(wp.jobs)
 }

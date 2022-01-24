@@ -32,6 +32,7 @@ type Job struct {
 func (j Job) execute(ctx context.Context) Result {
 	value, err := j.ExecFn(ctx, j.Args)
 	if err != nil {
+		log.Printf("error into job %v : %v", j.Descriptor.ID, err.Error())
 		return Result{
 			Err:        err,
 			Descriptor: j.Descriptor,

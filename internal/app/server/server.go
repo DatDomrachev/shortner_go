@@ -29,7 +29,7 @@ type srv struct {
 	address string
 	baseURL string
 	repo    repository.Repositorier
-	wp 		wpool.WorkerPool
+	wp 		wpool.WorkerPooler
 }
 
 type gzipWriter struct {
@@ -43,7 +43,7 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
-func New(address string, baseURL string, repo repository.Repositorier, wp wpool.WorkerPool) *srv {
+func New(address string, baseURL string, repo repository.Repositorier, wp wpool.WorkerPooler) *srv {
 	server := &srv{
 		address: address,
 		baseURL: baseURL,

@@ -211,7 +211,7 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 	}
 }
 
-func DeleteItemsHandler(repo repository.Repositorier, wp wpool.WorkerPool, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
+func DeleteItemsHandler(repo repository.Repositorier, wp wpool.WorkerPooler, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -251,7 +251,8 @@ func DeleteItemsHandler(repo repository.Repositorier, wp wpool.WorkerPool, baseU
 				return repo.DeleteByUser(ctx, argVal.WhereIn, argVal.UserToken)
 			}
 
-			time := time.Now().Unix()	
+			time := time.Now().Unix()
+
 			job := wpool.Job {
 				Descriptor: wpool.JobDescriptor{
 					ID:       wpool.JobID(fmt.Sprintf("%v_%v", userToken, time)),
@@ -265,7 +266,7 @@ func DeleteItemsHandler(repo repository.Repositorier, wp wpool.WorkerPool, baseU
 				},
 			}
 
-			wp.Jobs <- job
+			wp.GenerateFrom(job)
 		}
 		
 		w.WriteHeader(http.StatusAccepted)
