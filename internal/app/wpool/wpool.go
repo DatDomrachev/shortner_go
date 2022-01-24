@@ -64,5 +64,4 @@ func (wp *WorkerPool) Run(ctx context.Context) {
 
 func (wp *WorkerPool) GenerateFrom(jobBulk Job) {
 		wp.jobs <- jobBulk
-	close(wp.jobs)
 }
