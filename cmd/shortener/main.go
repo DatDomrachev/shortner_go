@@ -5,9 +5,11 @@ import (
 	"github.com/DatDomrachev/shortner_go/internal/app/config"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
 	"github.com/DatDomrachev/shortner_go/internal/app/server"
+	"github.com/DatDomrachev/shortner_go/internal/app/wpool"
 	"log"
 	"os"
 	"os/signal"
+	"runtime"
 )
 
 func main() {
@@ -24,7 +26,11 @@ func main() {
 		log.Fatalf("failed to init repository:+%v", err)
 	}
 
-	s := server.New(config.Address, config.BaseURL, repo)
+	workersCounter := runtime.NumCPU()
+
+	wp := wpool.New(workersCounter);
+
+	s := server.New(config.Address, config.BaseURL, repo, wp)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

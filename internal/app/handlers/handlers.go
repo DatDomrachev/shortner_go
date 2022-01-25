@@ -4,18 +4,45 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
+	"github.com/DatDomrachev/shortner_go/internal/app/wpool"
 	"io/ioutil"
 	"net/http"
 	"errors"
+	"strings"
+	"context"
+	"fmt"
+	"time"
 )
+
+type JobData struct {
+	WhereIn   string
+	UserToken string
+}
+
+type ArgsError struct {
+	Message string
+}
+
+
+func (ae *ArgsError) Error() string {
+	return fmt.Sprintf("%v", ae.Message)
+}
+
 
 func SimpleReadHandler(repo repository.Repositorier) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fullURL, err := repo.Load(r.Context(), r.URL.Path)
 
 		if err != nil {
-			http.Error(w, "Not found", http.StatusBadRequest)
-			return
+			var ge *repository.GoneError
+
+			if errors.As(err, &ge) {
+				http.Error(w, "Deleted", http.StatusGone)
+				return
+			} else {
+				http.Error(w, "Not found", http.StatusBadRequest)
+				return
+			}
 		}
 
 		http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
@@ -183,3 +210,66 @@ func BatchHandler(repo repository.Repositorier, baseURL string, userToken string
 
 	}
 }
+
+func DeleteItemsHandler(repo repository.Repositorier, wp wpool.WorkerPooler, baseURL string, userToken string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var shortens []string
+		var ids []string
+	
+		err = json.Unmarshal(body, &shortens)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return 
+		}
+
+		for i := range shortens {
+			if len(shortens[i]) > 0 {
+				ids = append(ids, strings.ReplaceAll(shortens[i], baseURL+"/", ""))
+			}
+		}
+
+		if len(ids) > 0 {
+
+			
+			whereIn := strings.Join(ids, ",")
+
+			execFn := func(ctx context.Context, args interface{}) (interface{}, error) {		
+				argVal, ok := args.(JobData)
+			
+				if !ok {
+					return nil, &ArgsError {
+						Message: "Bad arguments",
+					}
+				}
+
+				return repo.DeleteByUser(ctx, argVal.WhereIn, argVal.UserToken)
+			}
+
+			time := time.Now().Unix()
+
+			job := wpool.Job {
+				Descriptor: wpool.JobDescriptor{
+					ID:       wpool.JobID(fmt.Sprintf("%v_%v", userToken, time)),
+					JType:    "delete",
+					Metadata: nil,
+				},
+				ExecFn: execFn,
+				Args:   JobData{
+					WhereIn:   whereIn,
+					UserToken: userToken,
+				},
+			}
+
+			go wp.GenerateFrom(job)
+		}
+		
+		w.WriteHeader(http.StatusAccepted)
+
+	}
+}	

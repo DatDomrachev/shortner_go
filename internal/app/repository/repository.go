@@ -23,6 +23,7 @@ type Repositorier interface {
 	GetByUser(ctx context.Context, userToken string) ([]MyItem, error)
 	BatchAll(ctx context.Context, items []CorrelationItem, userToken string) ([]CorrelationShort, error)
 	PingDB(ctx context.Context) bool
+	DeleteByUser(ctx context.Context, ids string, userToken string)(QueryResult, error)
 }
 
 type Item struct {
@@ -64,8 +65,21 @@ type ConflictError struct {
 	Err error
 }
 
+type GoneError struct {
+	Message string
+}
+
+type QueryResult struct {
+	Message string 
+}
+
+
 func (ce *ConflictError) Error() string {
 	return fmt.Sprintf("%v %v", ce.ConflictID, ce.Err)
+}
+
+func (ge *GoneError) Error() string {
+	return fmt.Sprintf("%v", ge.Message)
 }
 
 func New(storagePath string, databaseURL string) (*Repo, error) {
@@ -119,6 +133,12 @@ func New(storagePath string, databaseURL string) (*Repo, error) {
 		}
 
 		_, err = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_urls_constrain ON url (full_url)")
+
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = db.Exec("ALTER TABLE url ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false")
 
 		if err != nil {
 			return nil, err
@@ -183,6 +203,8 @@ func (r *Repo) GetByUser(ctx context.Context, user string) ([]MyItem, error) {
 func (r *Repo) Load(ctx context.Context, shortURL string) (string, error) {
 
 	fullURL := ""
+	isDeleted := false
+
 	param := strings.TrimPrefix(shortURL, `/`)
 
 	id, err := strconv.Atoi(param)
@@ -198,13 +220,21 @@ func (r *Repo) Load(ctx context.Context, shortURL string) (string, error) {
 		}
 	}
 
-	if r.DB.conn != nil {
-		row := r.DB.conn.QueryRowContext(ctx, "SELECT full_url from url WHERE id = $1", id)
-		err := row.Scan(&fullURL)
+	if r.DB.conn != nil { 
+		row := r.DB.conn.QueryRowContext(ctx, "SELECT full_url, is_deleted from url WHERE id = $1", id)
+		err := row.Scan(&fullURL, &isDeleted)
 		if err != nil {
 			log.Print(err.Error())
 			return "", err
 		}
+
+		if isDeleted {
+			log.Print("wasDeleted")
+			return "", &GoneError {
+				Message: "Url was deleted",
+			}
+		}
+
 	}
 
 	return fullURL, nil
@@ -347,4 +377,17 @@ func (r *Repo) BatchAll(ctx context.Context, items []CorrelationItem, userToken 
 	}
 
 	return shortens, nil
+}
+
+func (r *Repo) DeleteByUser(ctx context.Context, ids string, userToken string) (QueryResult, error) {
+	
+	_, err := r.DB.conn.ExecContext(ctx, "UPDATE url SET is_deleted = true WHERE user_token = $1 AND id IN ("+ ids+")", userToken)
+
+	if err != nil {
+		log.Print(err.Error())
+		return QueryResult{ Message: "fail" }, err
+	}
+		
+	return QueryResult{ Message: "done" } ,nil
+
 }

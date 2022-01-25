@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/DatDomrachev/shortner_go/internal/app/config"
 	"github.com/DatDomrachev/shortner_go/internal/app/repository"
+	"github.com/DatDomrachev/shortner_go/internal/app/wpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -12,9 +13,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"runtime"
 )
 
-func testRequest(t *testing.T, config *config.Config, repo *repository.Repo, method, path, body string) (*http.Response, string) {
+func testRequest(t *testing.T, config *config.Config, repo *repository.Repo, wp *wpool.WorkerPool, method, path, body string) (*http.Response, string) {
 
 	request := httptest.NewRequest(method, path, nil)
 
@@ -39,6 +41,10 @@ func testRequest(t *testing.T, config *config.Config, repo *repository.Repo, met
 		SimpleReadHandler(repo)(w, request)
 	}
 
+	if method == "DELETE" {
+		DeleteItemsHandler(repo, wp, config.BaseURL, "1")(w, request)
+	}
+
 	result := w.Result()
 
 	respBody, err := ioutil.ReadAll(result.Body)
@@ -58,23 +64,27 @@ func TestRouter(t *testing.T) {
 	}
 
 	repo, err := repository.New(config.StoragePath, "")
+	workersCounter := runtime.NumCPU()
+
+	wp := wpool.New(workersCounter);
+
 	if err != nil {
 		log.Fatalf("failed to init repository:+%v", err)
 	}
-	result1, body1 := testRequest(t, config, repo, "POST", "/", "http://google.com")
+	result1, body1 := testRequest(t, config, repo, wp, "POST", "/", "http://google.com")
 	assert.Equal(t, 201, result1.StatusCode)
 	assert.Equal(t, "application/json", result1.Header.Get("Content-Type"))
 	assert.Equal(t, config.BaseURL+"/1", body1)
 	defer result1.Body.Close()
 
-	result2, body2 := testRequest(t, config, repo, "GET", "/1", "")
+	result2, body2 := testRequest(t, config, repo, wp, "GET", "/1", "")
 	assert.Equal(t, 307, result2.StatusCode)
 	assert.Equal(t, "text/html; charset=utf-8", result2.Header.Get("Content-Type"))
 	assert.Equal(t, "http://google.com", result2.Header.Get("Location"))
 	log.Println(body2)
 	defer result2.Body.Close()
 
-	result3, body3 := testRequest(t, config, repo, "GET", "/aboba23", "")
+	result3, body3 := testRequest(t, config, repo, wp, "GET", "/aboba23", "")
 	assert.Equal(t, http.StatusBadRequest, result3.StatusCode)
 	assert.Equal(t, "text/plain; charset=utf-8", result3.Header.Get("Content-Type"))
 	log.Println(body3)
@@ -95,11 +105,25 @@ func TestRouter(t *testing.T) {
 		return
 	}
 
-	result4, body4 := testRequest(t, config, repo, "POST", "/api/shorten", inputBuf.String())
+	result4, body4 := testRequest(t, config, repo, wp, "POST", "/api/shorten", inputBuf.String())
 	assert.Equal(t, 201, result4.StatusCode)
 	assert.Equal(t, "application/json", result4.Header.Get("Content-Type"))
 	assert.Equal(t, outputBuf.String(), body4)
 	log.Println(body4)
 	defer result4.Body.Close()
+
+	var links []string
+	links = append(links, config.BaseURL + "/1")
+	links = append(links, config.BaseURL + "/2")
+	
+	inputBuf2 := bytes.NewBuffer([]byte{})
+	if err := json.NewEncoder(inputBuf2).Encode(links); err != nil {
+		log.Println(err.Error())
+		return
+	}
+	result5, body5 := testRequest(t, config, repo, wp, "DELETE", "/api/user/urls", inputBuf2.String())
+	assert.Equal(t, 202, result5.StatusCode)
+	log.Println(body5)
+	defer result5.Body.Close()
 
 }
