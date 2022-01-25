@@ -266,7 +266,7 @@ func DeleteItemsHandler(repo repository.Repositorier, wp wpool.WorkerPooler, bas
 				},
 			}
 
-			wp.GenerateFrom(job)
+			go wp.GenerateFrom(job)
 		}
 		
 		w.WriteHeader(http.StatusAccepted)
