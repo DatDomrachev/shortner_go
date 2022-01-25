@@ -58,6 +58,7 @@ func TestWorkerPool(t *testing.T) {
 			log.Print("done")
 			return
 		default:
+			log.Print("waiting")
 		}
 	}
 }
@@ -79,6 +80,7 @@ func TestWorkerPool_TimeOut(t *testing.T) {
 		case <-wp.Done():
 			return
 		default:
+			log.Print("waiting")
 		}
 	}
 }
@@ -100,6 +102,7 @@ func TestWorkerPool_Cancel(t *testing.T) {
 		case <-wp.Done():
 			return
 		default:
+			log.Print("waiting")
 		}
 	}
 }
